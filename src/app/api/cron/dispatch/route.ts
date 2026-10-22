@@ -30,7 +30,9 @@ async function run(req: Request) {
     if (!validSecret(req.headers.get("authorization")) && !(await validQStash(req, body))) {
       throw new HttpError(401, "Não autorizado.");
     }
-    return json(await dispatchDue());
+    const summary = await dispatchDue();
+    if (summary.due > 0) console.log("dispatch", JSON.stringify(summary));
+    return json(summary);
   });
 }
 

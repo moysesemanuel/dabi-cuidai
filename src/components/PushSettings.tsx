@@ -84,6 +84,18 @@ export function PushSettings() {
               </button>
               <button
                 disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await sendTestPush(true);
+                    setMessage("Feche o app e bloqueie a tela agora. O aviso chega em cerca de 20 segundos.");
+                  })
+                }
+                className="btn h-12 bg-white px-4 text-base"
+              >
+                Testar com o app fechado
+              </button>
+              <button
+                disabled={busy}
                 onClick={() => run(async () => { await disablePush(); setPush("off"); })}
                 className="btn h-12 bg-white px-4 text-base"
               >

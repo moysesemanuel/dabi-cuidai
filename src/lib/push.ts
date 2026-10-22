@@ -65,4 +65,4 @@ export async function syncPush(): Promise<void> {
   if (sub) await api("POST", "/api/push/subscribe", sub.toJSON());
 }
 
-export const sendTestPush = () => api("POST", "/api/push/test");
+export const sendTestPush = (delayed = false) => api("POST", "/api/push/test", { delayed });
