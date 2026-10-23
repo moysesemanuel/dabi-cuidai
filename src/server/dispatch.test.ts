@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMessage, type DueDose } from "./dispatch";
+import { nextTarget } from "./schedule";
 
 const dose = (over: Partial<DueDose> = {}): DueDose => ({
   id: 7,
@@ -30,5 +31,25 @@ describe("buildMessage", () => {
   it("não inventa texto de dose quando a receita não tem", () => {
     const m = buildMessage(dose({ doseText: "" }), dose().scheduledAt);
     expect(m.body).toBe("Azitromicina 600mg");
+  });
+});
+
+describe("nextTarget", () => {
+  const now = Date.UTC(2026, 9, 22, 12, 0);
+
+  it("não agenda nada quando não há dose a avisar", () => {
+    expect(nextTarget(null, now)).toBeNull();
+  });
+
+  it("agenda na hora da dose quando ela está no futuro", () => {
+    expect(nextTarget(now + 2 * 3_600_000, now)).toBe(now + 2 * 3_600_000);
+  });
+
+  it("dose já vencida vira uma chamada logo em seguida, nunca no passado", () => {
+    expect(nextTarget(now - 60_000, now)).toBe(now + 5_000);
+  });
+
+  it("dose distante é limitada a 23h, para o vigia horário refazer a conta", () => {
+    expect(nextTarget(now + 5 * 86_400_000, now)).toBe(now + 23 * 3_600_000);
   });
 });

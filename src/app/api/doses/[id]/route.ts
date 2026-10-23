@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { armDispatch } from "@/server/schedule";
 import { requireSession } from "@/server/auth";
 import { handle, HttpError, idParam, json, readJson } from "@/server/http";
 import { setDoseGiven } from "@/server/repo";
@@ -11,6 +13,8 @@ export async function POST(req: Request, { params }: Ctx) {
     const { given } = await readJson(req);
     if (typeof given !== "boolean") throw new HttpError(400, "Parâmetro given inválido.");
     await setDoseGiven(session, idParam((await params).id), given);
+    // Desfazer "Já dei" volta a dose para a fila de avisos.
+    if (!given) after(() => armDispatch());
     return json({ ok: true });
   });
 }

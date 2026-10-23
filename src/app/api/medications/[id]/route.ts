@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { armDispatch } from "@/server/schedule";
 import { requireSession } from "@/server/auth";
 import { handle, HttpError, idParam, json, readJson } from "@/server/http";
 import { deleteMedication, parseMedication, updateMedication } from "@/server/repo";
@@ -14,6 +16,7 @@ export async function PUT(req: Request, { params }: Ctx) {
       throw new HttpError(400, "Parâmetro from inválido.");
     }
     await updateMedication(session, idParam((await params).id), parseMedication(body), from);
+    after(() => armDispatch());
     return json({ ok: true });
   });
 }

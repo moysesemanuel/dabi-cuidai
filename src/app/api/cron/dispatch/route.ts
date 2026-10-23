@@ -2,6 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 import { Receiver } from "@upstash/qstash";
 import { dispatchDue } from "@/server/dispatch";
 import { handle, HttpError, json } from "@/server/http";
+import { purgeLimits } from "@/server/ratelimit";
+import { armDispatch } from "@/server/schedule";
 
 function validSecret(header: string | null): boolean {
   const secret = process.env.CRON_SECRET;
@@ -23,7 +25,7 @@ async function validQStash(req: Request, body: string): Promise<boolean> {
   }
 }
 
-/** Chamado pelo Upstash QStash a cada 2 minutos (ou à mão, com CRON_SECRET). Só aceita chamadas autenticadas. */
+/** Chamado pelo QStash na hora de cada aviso e uma vez por hora (ou à mão, com CRON_SECRET). Só aceita chamadas autenticadas. */
 async function run(req: Request) {
   return handle(async () => {
     const body = await req.text();
@@ -32,6 +34,9 @@ async function run(req: Request) {
     }
     const summary = await dispatchDue();
     if (summary.due > 0) console.log("dispatch", JSON.stringify(summary));
+    // Arma a próxima chamada e aproveita o vigia horário para limpar contadores antigos.
+    await armDispatch();
+    await purgeLimits().catch(() => {});
     return json(summary);
   });
 }

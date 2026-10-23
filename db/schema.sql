@@ -61,3 +61,10 @@ create table if not exists doses (
 create index if not exists doses_family_scheduled_idx on doses (family_id, scheduled_at);
 create index if not exists doses_due_idx on doses (scheduled_at) where status = 'pending';
 create index if not exists medications_family_idx on medications (family_id);
+
+-- Limite de tentativas por IP (criar família, entrar com código).
+create table if not exists rate_limits (
+  key text primary key,
+  window_start bigint not null,
+  count integer not null
+);
