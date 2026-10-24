@@ -44,7 +44,7 @@ const NAV = [
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {children}
     </svg>
   );
@@ -55,25 +55,38 @@ function NavLinks({ variant }: { variant: "side" | "bottom" }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-  return NAV.map((item) => (
-    <Link
-      key={item.href}
-      href={item.href}
-      aria-current={isActive(item.href) ? "page" : undefined}
-      className={
-        variant === "side"
-          ? "flex h-12 items-center gap-3 rounded-2xl px-4 text-base " +
-            (isActive(item.href)
-              ? "border-[2.5px] border-ink bg-sun font-semibold shadow-[0_3px_0_var(--color-ink)]"
-              : "font-medium text-ink-soft")
-          : "flex h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[13px] " +
-            (isActive(item.href) ? "border-[2.5px] border-ink bg-sun font-semibold" : "font-medium text-ink-soft")
-      }
-    >
-      <Icon>{item.icon}</Icon>
-      {item.label}
-    </Link>
-  ));
+  return NAV.map((item) => {
+    const active = isActive(item.href);
+    if (variant === "side") {
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={active ? "page" : undefined}
+          className={
+            "flex h-12 items-center gap-3 rounded-2xl px-4 text-base " +
+            (active ? "bg-sky font-semibold" : "font-medium text-ink-soft")
+          }
+        >
+          <Icon>{item.icon}</Icon>
+          {item.label}
+        </Link>
+      );
+    }
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        className={"flex h-full flex-1 flex-col items-center justify-center gap-1 text-xs " + (active ? "font-semibold text-ink" : "font-medium text-ink-soft")}
+      >
+        <span className={"flex h-8 w-14 items-center justify-center rounded-full " + (active ? "bg-sky" : "")}>
+          <Icon>{item.icon}</Icon>
+        </span>
+        {item.label}
+      </Link>
+    );
+  });
 }
 
 function Banners() {
@@ -81,7 +94,7 @@ function Banners() {
   return (
     <>
       {offline && (
-        <p role="status" className="mb-4 rounded-2xl border-[2.5px] border-ink bg-blush p-2.5 text-sm font-semibold">
+        <p role="status" className="mb-4 rounded-2xl border border-line bg-blush p-2.5 text-sm font-semibold">
           Sem conexão: mostrando o que já estava na tela. Os avisos só chegam com internet.
         </p>
       )}
@@ -101,19 +114,19 @@ function Frame({ children }: { children: React.ReactNode }) {
   if (status === "unavailable") {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">
-        <h1 className="text-2xl font-bold">Não consegui carregar</h1>
+        <h1 className="text-2xl font-semibold">Não consegui carregar</h1>
         <p className="text-ink-soft">Confira a internet e tente de novo.</p>
-        <button onClick={retry} className="btn h-14 bg-sun text-lg">Tentar de novo</button>
+        <button onClick={retry} className="btn h-14 bg-sky text-lg">Tentar de novo</button>
       </div>
     );
   }
 
   return (
     <div className="min-h-dvh lg:flex">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r-[3px] border-ink bg-white p-5 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r border-line bg-white p-5 lg:flex">
         <div className="flex items-center gap-2">
           <Mascot size={48} />
-          <div className="text-xl font-bold leading-tight">
+          <div className="text-xl font-semibold leading-tight">
             Hora do
             <br />
             remedinho
@@ -133,7 +146,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-10 flex h-[76px] items-center gap-1.5 border-t-[3px] border-ink bg-white px-3 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 flex h-[76px] items-stretch border-t border-line bg-white px-2 pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
       >
         <Suspense fallback={null}>
           <NavLinks variant="bottom" />

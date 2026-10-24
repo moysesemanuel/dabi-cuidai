@@ -26,33 +26,33 @@ export function RemediosScreen() {
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold">Remédios</h1>
-        <Link href="/novo" aria-label="Novo remédio" className="btn size-[3.1rem] rounded-full bg-sun">
+        <h1 className="text-3xl font-semibold">Remédios</h1>
+        <Link href="/novo" aria-label="Novo remédio" className="fab">
           <PlusIcon />
         </Link>
       </header>
 
       {data.length === 0 && (
-        <section className="sticker flex flex-col items-center gap-3 p-6 text-center">
+        <section className="card flex flex-col items-center gap-3 p-6 text-center">
           <Mascot size={96} />
           <p className="text-ink-soft">Nenhum remédio cadastrado ainda.</p>
-          <Link href="/novo" className="btn h-14 bg-mint px-6 text-lg">
+          <Link href="/novo" className="btn btn-primary h-14 px-6 text-lg">
             <PlusIcon size={22} /> Novo remédio
           </Link>
         </section>
       )}
 
-      <ul className="grid gap-3 lg:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {data.map(({ med, child }) => {
           const end = med.firstDoseAt + med.days * 86_400_000;
           const first = new Date(med.firstDoseAt);
           const day = previewDay(first.getHours() * 60 + first.getMinutes(), med.intervalMinutes);
           return (
-            <li key={med.id} className="sticker flex flex-col gap-3 p-4">
+            <li key={med.id} className="card flex flex-col gap-3 p-4">
               <div className="flex items-start gap-3">
                 <Avatar fill={child?.fill ?? "#ddd"} size={40} />
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-xl font-bold">{med.name}</h2>
+                  <h2 className="break-words text-xl font-semibold leading-tight">{med.name}</h2>
                   <p className="text-[15px] text-ink-soft">
                     {child?.name ?? "—"} · a cada {formatInterval(med.intervalMinutes)}
                   </p>
@@ -65,7 +65,7 @@ export function RemediosScreen() {
                 <div className="flex shrink-0 flex-col gap-2">
                   <Link
                     href={`/remedios/${med.id}`}
-                    className="pill bg-sun px-3 py-1.5 text-center text-sm font-semibold"
+                    className="pill bg-sky px-3 py-1.5 text-center text-sm font-semibold"
                   >
                     Editar
                   </Link>

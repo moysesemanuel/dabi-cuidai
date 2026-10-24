@@ -49,15 +49,15 @@ export function ImportBanner() {
 
   const n = legacy.medications.length;
   return (
-    <section className="sticker mb-5 flex flex-col gap-2 bg-cream p-4" style={{ background: "var(--color-cream)" }}>
-      <h2 className="text-lg font-bold">Trazer os remédios deste celular?</h2>
+    <section className="card mb-5 flex flex-col gap-2 bg-cream p-4">
+      <h2 className="text-lg font-semibold">Trazer os remédios deste celular?</h2>
       <p className="text-[15px] leading-snug">
         Encontrei {n} {n === 1 ? "remédio guardado" : "remédios guardados"} só neste aparelho. Importe para a família
         e os outros celulares passam a ver também.
       </p>
       {error && <p role="alert" className="text-sm font-semibold">{error}</p>}
       <div className="flex gap-2">
-        <button onClick={onImport} disabled={busy} className="btn h-12 flex-1 bg-mint text-base">
+        <button onClick={onImport} disabled={busy} className="btn btn-primary h-12 flex-1 text-base">
           {busy ? "Importando..." : "Importar"}
         </button>
         <button onClick={dismiss} disabled={busy} className="btn h-12 bg-white px-4 text-base">Agora não</button>

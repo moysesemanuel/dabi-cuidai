@@ -14,7 +14,7 @@ function EditarRemedio() {
   if (!medication) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <h1 className="text-3xl font-bold">Remédio não encontrado</h1>
+        <h1 className="text-3xl font-semibold">Remédio não encontrado</h1>
         <Link href="/remedios" className="btn h-12 bg-white px-5 text-base">
           Voltar para Remédios
         </Link>

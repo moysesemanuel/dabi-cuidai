@@ -30,9 +30,9 @@ export function PushSettings() {
 
   const others = state.pushDeviceCount;
   return (
-    <section aria-labelledby="avisos" className="flex flex-col gap-3">
-      <h2 id="avisos" className="text-xl font-bold">Avisos de remédio</h2>
-      <div className="sticker flex flex-col gap-3 p-4">
+    <section aria-labelledby="avisos" className="flex flex-col gap-2">
+      <h2 id="avisos" className="group-label">Avisos de remédio</h2>
+      <div className="card flex flex-col gap-3 p-4">
         {push === "checking" && <p className="text-ink-soft">Verificando...</p>}
 
         {push === "unsupported" && (
@@ -64,7 +64,7 @@ export function PushSettings() {
             <button
               disabled={busy}
               onClick={() => run(async () => setPush(await enablePush()))}
-              className="btn h-14 bg-mint text-lg"
+              className="btn btn-primary h-14 text-lg"
             >
               {busy ? "Ativando..." : "Ativar avisos neste celular"}
             </button>
@@ -78,7 +78,7 @@ export function PushSettings() {
               <button
                 disabled={busy}
                 onClick={() => run(async () => { await sendTestPush(); setMessage("Aviso de teste enviado. Ele deve chegar em instantes."); })}
-                className="btn h-12 bg-sun px-4 text-base"
+                className="btn h-12 bg-sky px-4 text-base"
               >
                 Enviar aviso de teste
               </button>

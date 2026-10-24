@@ -1,41 +1,159 @@
 @import "tailwindcss";
 
+/*
+  Cores por papel, não por matiz: o claro e o escuro trocam só os valores abaixo.
+  Pastéis marcam o significado (verde = dado, coral = atrasado, roxo = hora de dormir, azul = navegação).
+*/
 @theme {
-  --color-ink: #1f2a44;
-  --color-ink-soft: #3d4b6b;
-  --color-paper: #eaf6ff;
-  --color-sun: #ffd54a;
-  --color-mint: #7be0b5;
-  --color-coral: #ff8a7a;
-  --color-lilac: #d9d2ff;
-  --color-cream: #fff8d6;
-  --color-pale: #bff0da;
-  --color-blush: #ffc9c0;
-  --font-sans: "Fredoka", system-ui, sans-serif;
+  --color-ink: var(--c-ink);
+  --color-ink-soft: var(--c-ink-soft);
+  --color-paper: var(--c-paper);
+  --color-white: var(--c-surface);
+  --color-line: var(--c-line);
+  --color-track: var(--c-track);
+  --color-sun: var(--c-sun);
+  --color-mint: var(--c-mint);
+  --color-coral: var(--c-coral);
+  --color-lilac: var(--c-lilac);
+  --color-cream: var(--c-cream);
+  --color-pale: var(--c-pale);
+  --color-blush: var(--c-blush);
+  --color-sky: var(--c-sky);
+  --color-accent: var(--c-accent);
+  --color-primary: var(--c-primary);
+  --font-sans: "Figtree", system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --c-paper: #faf9f8;
+  --c-surface: #ffffff;
+  --c-line: #ebe8e4;
+  --c-track: #efedf2;
+  --c-ink: #2b2f3c;
+  --c-ink-soft: #6c7080;
+  --c-accent: #4f6fd6;
+  --c-sun: #fbeab8;
+  --c-mint: #cfeadb;
+  --c-pale: #e2f3ea;
+  --c-coral: #f7b9ad;
+  --c-blush: #fbe3e0;
+  --c-lilac: #e8e3f6;
+  --c-cream: #fdf3d5;
+  --c-sky: #dce7fb;
+  --c-primary: #f9d71c;
+  --c-dose: #4cb98c;
+  --c-dose-night: #9f8fe0;
+  --shadow-card: 0 1px 2px rgb(40 36 30 / 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-paper: #15171f;
+    --c-surface: #1e212b;
+    --c-line: #2f3342;
+    --c-track: #2a2e3d;
+    --c-ink: #eceef6;
+    --c-ink-soft: #a5abbf;
+    --c-accent: #8fa8f0;
+    --c-sun: #3c4478;
+    --c-mint: #1f5a46;
+    --c-pale: #1d4a3c;
+    --c-coral: #84433a;
+    --c-blush: #6b3b38;
+    --c-lilac: #433a70;
+    --c-cream: #4b4122;
+    --c-sky: #28426f;
+    --c-primary: #f0cf27;
+    --c-dose: #5fd3a2;
+    --c-dose-night: #b3a4f2;
+    --shadow-card: none;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-primary: #f0cf27;
+  --c-paper: #15171f;
+  --c-surface: #1e212b;
+  --c-line: #2f3342;
+  --c-track: #2a2e3d;
+  --c-ink: #eceef6;
+  --c-ink-soft: #a5abbf;
+  --c-accent: #8fa8f0;
+  --c-sun: #3c4478;
+  --c-mint: #1f5a46;
+  --c-pale: #1d4a3c;
+  --c-coral: #84433a;
+  --c-blush: #6b3b38;
+  --c-lilac: #433a70;
+  --c-cream: #4b4122;
+  --c-sky: #28426f;
+  --c-dose: #5fd3a2;
+  --c-dose-night: #b3a4f2;
+  --shadow-card: none;
 }
 
 html {
-  background: var(--color-paper);
+  background: var(--c-paper);
 }
 
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--c-paper);
+  color: var(--c-ink);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
 }
 
 :focus-visible {
-  outline: 4px solid #6c4bd8;
+  outline: 3px solid var(--c-accent);
   outline-offset: 2px;
 }
 
 @layer components {
-  .sticker {
-    background: #fff;
-    border: 3px solid var(--color-ink);
-    border-radius: 1.6rem;
-    box-shadow: 0 5px 0 var(--color-ink);
+  .card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: 1.125rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Ação principal: amarelo, como nas telas de referência. */
+  .btn-primary {
+    background: var(--c-primary);
+    border-color: transparent;
+    color: #2b2f3c;
+  }
+
+  /* Filtro em forma de pílula reta (cantos de 12px), com ou sem contador. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 2.5rem;
+    padding: 0 0.85rem;
+    border: 1px solid var(--c-line);
+    border-radius: 0.8rem;
+    background: var(--c-surface);
+    color: var(--c-ink-soft);
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--c-sky);
+    border-color: transparent;
+    color: var(--c-ink);
+  }
+
+  /* Rótulo de grupo nas telas de ajustes. */
+  .group-label {
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--c-ink-soft);
   }
 
   .btn {
@@ -43,19 +161,18 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border: 3px solid var(--color-ink);
-    border-radius: 1.1rem;
-    box-shadow: 0 4px 0 var(--color-ink);
-    color: var(--color-ink);
-    font-weight: 700;
+    border: 1px solid color-mix(in srgb, var(--c-ink) 12%, transparent);
+    border-radius: 0.9rem;
+    color: var(--c-ink);
+    font-weight: 600;
     cursor: pointer;
     transition:
-      transform 80ms,
-      box-shadow 80ms;
+      transform 90ms,
+      filter 90ms;
   }
   .btn:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--color-ink);
+    transform: scale(0.97);
+    filter: brightness(0.96);
   }
   .btn:disabled {
     opacity: 0.55;
@@ -65,30 +182,57 @@ body {
   .field {
     width: 100%;
     height: 3.25rem;
-    border: 3px solid var(--color-ink);
-    border-radius: 1rem;
-    box-shadow: 0 3px 0 var(--color-ink);
-    background: #fff;
+    border: 1px solid var(--c-line);
+    border-radius: 0.9rem;
+    background: var(--c-surface);
     padding: 0 1rem;
     font-size: 1.125rem;
     font-weight: 500;
-    color: var(--color-ink);
+    color: var(--c-ink);
+  }
+  .field:focus {
+    border-color: var(--c-accent);
   }
 
   .num {
     width: 4.75rem;
     height: 3.25rem;
-    border: 3px solid var(--color-ink);
+    border: 1.5px solid var(--c-line);
     border-radius: 0.9rem;
-    background: var(--color-cream);
+    background: var(--c-cream);
     text-align: center;
     font-size: 1.375rem;
     font-weight: 700;
-    color: var(--color-ink);
+    color: var(--c-ink);
   }
 
   .pill {
-    border: 2.5px solid var(--color-ink);
+    border: 1.5px solid var(--c-line);
     border-radius: 999px;
+  }
+
+  /* Botão + : flutua sobre a barra inferior no celular e volta ao cabeçalho em telas largas. */
+  .fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 999px;
+    background: var(--c-coral);
+    color: var(--c-ink);
+    box-shadow: 0 10px 22px -8px rgb(247 120 100 / 0.55);
+    transition: transform 90ms;
+  }
+  .fab:active {
+    transform: scale(0.94);
+  }
+  @media (max-width: 1023.98px) {
+    .fab {
+      position: fixed;
+      right: 1.25rem;
+      bottom: calc(76px + 1rem + env(safe-area-inset-bottom, 0px));
+      z-index: 20;
+    }
   }
 }

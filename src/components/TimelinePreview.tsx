@@ -7,7 +7,7 @@ const TICK_HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
 
 function Track({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative mt-1.5 h-6 rounded-xl border-2 border-ink bg-[#EEF3F8]">
+    <div className="relative mt-1.5 h-6 rounded-xl border border-line bg-track">
       {/* faixa de dormir: 20h–6h */}
       <div className="absolute left-0 top-0 h-5 rounded-l-[10px] bg-lilac" style={{ width: `${(SLEEP_END_MINUTE / 1440) * 100}%` }} />
       <div
@@ -50,8 +50,8 @@ export function DayTimeline({ doses }: { doses: PreviewDose[] }) {
         {doses.map((d, i) => (
           <div
             key={i}
-            className="absolute top-0 size-5 rounded-full border-[2.5px] border-ink"
-            style={{ left: pct(d.minuteOfDay, 10), background: d.night ? "#D9D2FF" : "#7BE0B5" }}
+            className="absolute top-0 size-5 rounded-full border-2 border-white"
+            style={{ left: pct(d.minuteOfDay, 10), background: d.night ? "var(--c-dose-night)" : "var(--c-dose)" }}
           />
         ))}
       </Track>
@@ -80,25 +80,23 @@ export function TimelinePreview({
 
   return (
     <div>
-      <p className="mt-4 text-[13px] font-semibold tracking-wide text-ink-soft">ESTE REMÉDIO</p>
+      <p className="mt-4 text-[13px] font-semibold text-ink-soft">Este remédio</p>
       <Track>
         {doses.map((d, i) => (
           <div
             key={i}
-            className="absolute top-0 size-5 rounded-full border-[2.5px] border-ink"
-            style={{ left: pct(d.minuteOfDay, 10), background: d.night ? "#D9D2FF" : "#7BE0B5" }}
+            className="absolute top-0 size-5 rounded-full border-2 border-white"
+            style={{ left: pct(d.minuteOfDay, 10), background: d.night ? "var(--c-dose-night)" : "var(--c-dose)" }}
           />
         ))}
       </Track>
 
-      <p className="mt-3.5 text-[13px] font-semibold tracking-wide text-ink-soft">
-        JÁ CADASTRADOS
-      </p>
+      <p className="mt-3.5 text-[13px] font-semibold text-ink-soft">Já cadastrados</p>
       <Track>
         {others.map((o, i) => (
           <div
             key={i}
-            className="absolute top-[3px] size-3.5 rounded-full border-2 border-ink bg-[#8FD0FF]"
+            className="absolute top-[3px] size-3.5 rounded-full border border-line bg-accent"
             style={{ left: pct(o.minuteOfDay, 7) }}
           />
         ))}
@@ -111,9 +109,9 @@ export function TimelinePreview({
         {shown.map((d, i) => {
           const ok = !d.night && !d.conflictWith;
           return (
-            <li key={i} className="flex items-center gap-3 border-t-2 border-dashed border-[#C9D6E6] py-2.5">
-              <div className="w-[4.75rem] shrink-0 rounded-2xl border-[2.5px] border-ink bg-cream py-1 text-center">
-                <div className="text-[1.3rem] font-bold leading-tight tabular-nums">
+            <li key={i} className="flex items-center gap-3 border-t border-dashed border-line py-2.5">
+              <div className="w-[4.75rem] shrink-0 rounded-2xl border border-line bg-cream py-1 text-center">
+                <div className="text-[1.3rem] font-semibold leading-tight tabular-nums">
                   {formatClock(d.minuteOfDay)}
                 </div>
                 <div className="text-xs text-ink-soft">
@@ -134,7 +132,7 @@ export function TimelinePreview({
         })}
       </ul>
       {extra > 0 && (
-        <p className="border-t-2 border-dashed border-[#C9D6E6] py-2 text-sm font-semibold text-ink-soft">
+        <p className="border-t border-dashed border-line py-2 text-sm font-semibold text-ink-soft">
           + {extra} doses ao longo do dia
         </p>
       )}

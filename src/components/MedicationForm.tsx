@@ -100,17 +100,17 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
   }
 
   const presetBtn = (active: boolean) =>
-    "btn h-[3.25rem] flex-1 text-lg " + (active ? "bg-sun" : "bg-white shadow-none");
+    "btn h-[3.25rem] flex-1 text-lg " + (active ? "bg-sky" : "bg-white text-ink-soft");
 
   return (
     <div className="flex flex-col gap-5">
       <header className="flex items-center gap-3">
-        <Link href={editing ? "/remedios" : "/"} aria-label="Voltar" className="btn size-12 shrink-0 rounded-full bg-white shadow-[0_3px_0_var(--color-ink)]">
+        <Link href={editing ? "/remedios" : "/"} aria-label="Voltar" className="btn size-12 shrink-0 rounded-full bg-white">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </Link>
-        <h1 className="text-[1.75rem] font-bold">{editing ? "Editar remedinho" : "Novo remedinho"}</h1>
+        <h1 className="text-[1.75rem] font-semibold">{editing ? "Editar remedinho" : "Novo remedinho"}</h1>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8">
@@ -126,7 +126,7 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
                   aria-pressed={selectedChild === k.id}
                   className="btn h-14 flex-1 text-[17px]"
                   style={{
-                    background: selectedChild === k.id ? k.fill : "#fff",
+                    background: selectedChild === k.id ? k.fill : "var(--color-white)",
                     boxShadow: selectedChild === k.id ? undefined : "none",
                   }}
                 >
@@ -161,10 +161,10 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
                 <p className="text-sm font-medium text-ink-soft">Começou em {fmtDate(medication.firstDoseAt)}</p>
               ) : (
               <div className="flex gap-1.5" role="group" aria-label="Dia da primeira dose">
-                <button type="button" aria-pressed={!startTomorrow} onClick={() => setStartTomorrow(false)} className={"btn h-[3.25rem] px-3 text-base " + (!startTomorrow ? "bg-sun" : "bg-white shadow-none")}>
+                <button type="button" aria-pressed={!startTomorrow} onClick={() => setStartTomorrow(false)} className={"btn h-[3.25rem] px-3 text-base " + (!startTomorrow ? "bg-sky" : "bg-white text-ink-soft")}>
                   Hoje
                 </button>
-                <button type="button" aria-pressed={startTomorrow} onClick={() => setStartTomorrow(true)} className={"btn h-[3.25rem] px-3 text-base " + (startTomorrow ? "bg-sun" : "bg-white shadow-none")}>
+                <button type="button" aria-pressed={startTomorrow} onClick={() => setStartTomorrow(true)} className={"btn h-[3.25rem] px-3 text-base " + (startTomorrow ? "bg-sky" : "bg-white text-ink-soft")}>
                   Amanhã
                 </button>
               </div>
@@ -190,7 +190,7 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
                 </button>
               ))}
             </div>
-            <div className="mt-3 rounded-[1.1rem] border-[3px] border-dashed border-ink bg-white p-3">
+            <div className="mt-3 rounded-[1.1rem] border-[1.5px] border-dashed border-line bg-white p-3">
               <p className="text-[15px] text-ink-soft">O médico passou outro tempo? Digite aqui:</p>
               <div className="mt-2 flex items-center gap-2">
                 <label htmlFor="ih" className="sr-only">Horas</label>
@@ -212,15 +212,15 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
                 </button>
               ))}
             </div>
-            <div className="mt-3 rounded-[1.1rem] border-[3px] border-dashed border-ink bg-white p-3">
+            <div className="mt-3 rounded-[1.1rem] border-[1.5px] border-dashed border-line bg-white p-3">
               <p className="text-[15px] text-ink-soft">Outra duração? Ajuste os dias:</p>
               <div className="mt-2 flex items-center gap-2">
-                <button type="button" aria-label="Menos um dia" onClick={() => setDays(String(Math.max(1, daysN - 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-blush shadow-[0_3px_0_var(--color-ink)]">
+                <button type="button" aria-label="Menos um dia" onClick={() => setDays(String(Math.max(1, daysN - 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-blush">
                   <MinusIcon />
                 </button>
                 <label htmlFor="dias" className="sr-only">Dias de tratamento</label>
                 <input id="dias" type="number" inputMode="numeric" min={1} max={MAX_DAYS} className="num" value={days} onChange={(e) => setDays(e.target.value)} />
-                <button type="button" aria-label="Mais um dia" onClick={() => setDays(String(Math.min(MAX_DAYS, daysN + 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-pale shadow-[0_3px_0_var(--color-ink)]">
+                <button type="button" aria-label="Mais um dia" onClick={() => setDays(String(Math.min(MAX_DAYS, daysN + 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-pale">
                   <PlusIcon size={22} />
                 </button>
                 <span className="text-lg font-semibold">dias</span>
@@ -230,8 +230,8 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
         </div>
 
         <div className="flex flex-col gap-5 lg:sticky lg:top-6">
-          <section className="sticker p-4" aria-labelledby="como-ficam">
-            <h2 id="como-ficam" className="text-[1.4rem] font-bold">Como vão ficar as doses</h2>
+          <section className="card p-4" aria-labelledby="como-ficam">
+            <h2 id="como-ficam" className="text-[1.4rem] font-semibold">Como vão ficar as doses</h2>
             <p className="text-[15px] text-ink-soft">
               A cada {formatInterval(intervalMinutes)} ·{" "}
               {Number.isInteger(perDay) ? perDay : `cerca de ${Math.round(perDay * 10) / 10}`}{" "}
@@ -245,28 +245,28 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
             />
 
             {!repeatsDaily(intervalMinutes) && (
-              <p className="mt-1 rounded-2xl border-2 border-ink bg-[#DDF1FF] p-2.5 text-sm leading-snug">
+              <p className="mt-1 rounded-2xl border border-line bg-sky p-2.5 text-sm leading-snug">
                 Com esse intervalo, os horários mudam um pouco a cada dia. O app recalcula tudo para você.
               </p>
             )}
             {nightCount > 0 && (
-              <p className="mt-2 rounded-2xl border-2 border-ink bg-lilac p-2.5 text-sm leading-snug">
+              <p className="mt-2 rounded-2xl border border-line bg-lilac p-2.5 text-sm leading-snug">
                 {nightCount === 1 ? "1 dose cai na hora de dormir." : `${nightCount} doses caem na hora de dormir.`}{" "}
                 Se o médico permitir, mude a primeira dose para encaixar melhor.
               </p>
             )}
-            <p className="mt-2 border-t-2 border-dashed border-[#C9D6E6] pt-2.5 text-[17px] font-bold">
+            <p className="mt-2 border-t border-dashed border-line pt-2.5 text-[17px] font-semibold">
               {daysN} {daysN === 1 ? "dia" : "dias"} · {total} {total === 1 ? "dose" : "doses"} no total
             </p>
           </section>
 
           {error && (
-            <p role="alert" className="rounded-2xl border-[2.5px] border-ink bg-blush p-3 text-base font-semibold">
+            <p role="alert" className="rounded-2xl border border-line bg-blush p-3 text-base font-semibold">
               {error}
             </p>
           )}
 
-          <button onClick={onSave} disabled={saving} className="btn h-[3.75rem] bg-mint text-xl shadow-[0_5px_0_var(--color-ink)]">
+          <button onClick={onSave} disabled={saving} className="btn btn-primary h-[3.75rem] text-xl">
             <CheckIcon size={24} /> {editing ? "Salvar alterações" : "Salvar remedinho"}
           </button>
         </div>
