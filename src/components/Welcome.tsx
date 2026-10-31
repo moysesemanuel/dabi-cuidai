@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
-import { Mascot } from "./Art";
+import { Logo } from "./Art";
 import { useApp } from "./AppData";
 
 /** Primeira tela: criar a família (primeiro celular) ou entrar com o código (segundo celular). */
@@ -25,10 +25,10 @@ export function Welcome() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-5 px-5 py-8">
-      <div className="flex items-center gap-3">
-        <Mascot size={64} />
-        <h1 className="text-3xl font-semibold leading-tight">Hora do remedinho</h1>
-      </div>
+      <h1>
+        <Logo priority className="w-64 rounded-2xl bg-[#ffffff] px-3 py-2" />
+        <span className="sr-only">DaBi Cuidaí</span>
+      </h1>
       <p className="text-ink-soft">
         Os remédios ficam guardados na sua família. Assim, quem usar o app em outro celular vê os mesmos horários e
         recebe os mesmos avisos.

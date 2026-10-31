@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export function Avatar({ fill, size = 32 }: { fill: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="shrink-0 text-ink">
@@ -46,5 +48,12 @@ export function MinusIcon({ size = 22 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" aria-hidden="true">
       <path d="M5 12h14" />
     </svg>
+  );
+}
+
+/** Logo completo do DaBi Cuidaí. O texto escuro precisa de fundo claro, então use sobre uma placa branca. */
+export function Logo({ className, priority }: { className?: string; priority?: boolean }) {
+  return (
+    <Image src="/logo.png" alt="DaBi Cuidaí" width={960} height={348} priority={priority} className={className} />
   );
 }

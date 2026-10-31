@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { syncPush } from "@/lib/push";
-import { Mascot } from "./Art";
+import { Logo } from "./Art";
 import { AppDataProvider, useApp } from "./AppData";
 import { ImportBanner } from "./ImportBanner";
 import { Welcome } from "./Welcome";
@@ -124,14 +124,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh lg:flex">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r border-line bg-white p-5 lg:flex">
-        <div className="flex items-center gap-2">
-          <Mascot size={48} />
-          <div className="text-xl font-semibold leading-tight">
-            Hora do
-            <br />
-            remedinho
-          </div>
-        </div>
+        <Logo className="w-full rounded-2xl bg-[#ffffff] px-2 py-1" />
         <nav className="flex flex-col gap-2" aria-label="Principal">
           <Suspense fallback={null}>
             <NavLinks variant="side" />
