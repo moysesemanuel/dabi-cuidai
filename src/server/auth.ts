@@ -64,8 +64,16 @@ export async function joinFamily(rawCode: string, label: string | null): Promise
 export async function getSession(): Promise<Session | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
+  const now = Date.now();
+  // Registra o último acesso no máximo uma vez por hora (para o hub contar famílias ativas), na mesma ida ao banco.
   const [row] = await sql<{ id: string; family_id: string }[]>`
-    select id, family_id from devices where token_hash = ${hash(token)}`;
+    with s as (select id, family_id, last_seen_at from devices where token_hash = ${hash(token)}),
+    touch as (
+      update devices set last_seen_at = ${now} from s
+      where devices.id = s.id and (s.last_seen_at is null or s.last_seen_at < ${now - 3_600_000})
+      returning devices.id
+    )
+    select id, family_id from s`;
   return row ? { deviceId: row.id, familyId: row.family_id } : null;
 }
 
