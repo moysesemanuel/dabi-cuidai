@@ -4,103 +4,60 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { syncPush } from "@/lib/push";
-import { Logo } from "./Art";
+import { GearIcon, HomeIcon, Logo, MedIcon } from "./Art";
 import { AppDataProvider, useApp } from "./AppData";
-import { ImportBanner } from "./ImportBanner";
 import { Welcome } from "./Welcome";
 
 const NAV = [
-  {
-    href: "/",
-    label: "Hoje",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </>
-    ),
-  },
-  {
-    href: "/remedios",
-    label: "Remédios",
-    icon: (
-      <>
-        <rect x="3" y="9" width="18" height="7" rx="3.5" transform="rotate(-35 12 12.5)" />
-        <path d="M10.2 7.6l5.2 7.4" />
-      </>
-    ),
-  },
-  {
-    href: "/ajustes",
-    label: "Ajustes",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
-      </>
-    ),
-  },
+  { href: "/", label: "Hoje", Icon: HomeIcon },
+  { href: "/remedios", label: "Remédios", Icon: MedIcon },
+  { href: "/ajustes", label: "Ajustes", Icon: GearIcon },
 ];
-
-function Icon({ children }: { children: React.ReactNode }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
 
 /** Links de navegação. Ficam isolados porque `usePathname` precisa de um <Suspense> em rotas dinâmicas. */
 function NavLinks({ variant }: { variant: "side" | "bottom" }) {
   const pathname = usePathname();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  // O cadastro de remédio pertence à aba Remédios.
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href) || (href === "/remedios" && pathname === "/novo");
 
-  return NAV.map((item) => {
-    const active = isActive(item.href);
+  return NAV.map(({ href, label, Icon }) => {
+    const active = isActive(href);
     if (variant === "side") {
       return (
         <Link
-          key={item.href}
-          href={item.href}
+          key={href}
+          href={href}
           aria-current={active ? "page" : undefined}
           className={
-            "flex h-12 items-center gap-3 rounded-2xl px-4 text-base " +
-            (active ? "bg-sky font-semibold" : "font-medium text-ink-soft")
+            "flex h-12 items-center gap-3 rounded-2xl px-4 text-base font-bold " +
+            (active ? "bg-brand text-[#ffffff]" : "text-ink-soft")
           }
         >
-          <Icon>{item.icon}</Icon>
-          {item.label}
+          <Icon />
+          {label}
         </Link>
       );
     }
     return (
       <Link
-        key={item.href}
-        href={item.href}
+        key={href}
+        href={href}
         aria-current={active ? "page" : undefined}
-        className={"flex h-full flex-1 flex-col items-center justify-center gap-1 text-xs " + (active ? "font-semibold text-ink" : "font-medium text-ink-soft")}
+        className="flex h-full flex-1 items-center justify-center"
       >
-        <span className={"flex h-8 w-14 items-center justify-center rounded-full " + (active ? "bg-sky" : "")}>
-          <Icon>{item.icon}</Icon>
+        <span
+          className={
+            "flex h-[3.6rem] w-[5.5rem] flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-bold " +
+            (active ? "bg-brand text-[#ffffff]" : "text-ink")
+          }
+        >
+          <Icon />
+          {label}
         </span>
-        {item.label}
       </Link>
     );
   });
-}
-
-function Banners() {
-  const { offline } = useApp();
-  return (
-    <>
-      {offline && (
-        <p role="status" className="mb-4 rounded-2xl border border-line bg-blush p-2.5 text-sm font-semibold">
-          Sem conexão: mostrando o que já estava na tela. Os avisos só chegam com internet.
-        </p>
-      )}
-      <ImportBanner />
-    </>
-  );
 }
 
 /** Moldura do app. Antes de haver sessão, mostra só o carregamento ou a tela de entrada. */
@@ -114,17 +71,20 @@ function Frame({ children }: { children: React.ReactNode }) {
   if (status === "unavailable") {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">
-        <h1 className="text-2xl font-semibold">Não consegui carregar</h1>
+        <Logo size={36} />
+        <h1 className="text-2xl font-extrabold">Não consegui carregar</h1>
         <p className="text-ink-soft">Confira a internet e tente de novo.</p>
-        <button onClick={retry} className="btn h-14 bg-sky text-lg">Tentar de novo</button>
+        <button onClick={retry} className="btn btn-brand h-14 text-lg">Tentar de novo</button>
       </div>
     );
   }
 
   return (
     <div className="min-h-dvh lg:flex">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r border-line bg-white p-5 lg:flex">
-        <Logo className="w-full rounded-2xl bg-[#ffffff] px-2 py-1" />
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-white p-5 lg:flex">
+        <div className="px-2 pt-2">
+          <Logo size={34} />
+        </div>
         <nav className="flex flex-col gap-2" aria-label="Principal">
           <Suspense fallback={null}>
             <NavLinks variant="side" />
@@ -132,14 +92,11 @@ function Frame({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <main className="mx-auto w-full max-w-md px-5 pb-32 pt-6 lg:max-w-5xl lg:px-8 lg:pb-12 lg:pt-8">
-        <Banners />
-        {children}
-      </main>
+      <main className="mx-auto w-full max-w-md px-5 pb-32 lg:max-w-5xl lg:px-8 lg:pb-12 lg:pt-8">{children}</main>
 
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-10 flex h-[76px] items-stretch border-t border-line bg-white px-2 pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 flex h-[84px] items-stretch rounded-t-3xl border-t border-line bg-white px-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgb(28_58_62/0.06)] lg:hidden"
       >
         <Suspense fallback={null}>
           <NavLinks variant="bottom" />

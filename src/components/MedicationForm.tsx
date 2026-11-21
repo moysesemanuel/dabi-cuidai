@@ -1,11 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useReadyApp } from "@/components/AppData";
 import { ApiError } from "@/lib/api";
-import { Avatar, CheckIcon, MinusIcon, PlusIcon } from "@/components/Art";
+import {
+  Avatar,
+  BottleIcon,
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  InfoIcon,
+  MinusIcon,
+  NoteIcon,
+  PlusIcon,
+  RepeatIcon,
+} from "@/components/Art";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { TimelinePreview } from "@/components/TimelinePreview";
 import type { Medication } from "@/lib/types";
 import { fmtDate } from "@/lib/format";
@@ -22,8 +33,9 @@ import {
   type OtherDose,
 } from "@/lib/schedule";
 
-const INTERVAL_PRESETS = [4, 6, 8, 12];
-const DAY_PRESETS = [3, 5, 7, 10];
+/** Intervalos e durações mais comuns nas receitas; outros valores são digitados à mão. */
+const INTERVAL_PRESETS = [4, 6, 8, 12, 24];
+const DAY_PRESETS = [1, 3, 5, 7, 10, 14];
 
 /** Formulário de remédio: cria um novo ou, com `medication`, edita um já cadastrado. */
 export function MedicationForm({ medication }: { medication?: Medication }) {
@@ -42,6 +54,9 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
   const [ih, setIh] = useState(medication ? String(Math.floor(medication.intervalMinutes / 60)) : "8");
   const [im, setIm] = useState(medication ? String(medication.intervalMinutes % 60) : "0");
   const [days, setDays] = useState(String(medication?.days ?? 7));
+  const [intervalMode, setIntervalMode] = useState<"preset" | "custom">("preset");
+  const [daysMode, setDaysMode] = useState<"preset" | "custom">("preset");
+  const [doseHelp, setDoseHelp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +86,7 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
     setError(null);
     if (selectedChild === null) return setError("Escolha para quem é o remédio.");
     if (!name.trim()) return setError("Digite o nome do remédio.");
+    if (!doseText.trim()) return setError("Digite a dose como está na receita.");
     const parsed = parseClock(time);
     if (parsed === null) return setError("Escolha o horário da primeira dose.");
 
@@ -99,139 +115,212 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
     }
   }
 
-  const presetBtn = (active: boolean) =>
-    "btn h-[3.25rem] flex-1 text-lg " + (active ? "bg-sky" : "bg-white text-ink-soft");
+  const customInterval = intervalMode === "custom";
+  const customDays = daysMode === "custom";
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex items-center gap-3">
-        <Link href={editing ? "/remedios" : "/"} aria-label="Voltar" className="btn size-12 shrink-0 rounded-full bg-white">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </Link>
-        <h1 className="text-[1.75rem] font-semibold">{editing ? "Editar remedinho" : "Novo remedinho"}</h1>
-      </header>
+    <div className="flex flex-col">
+      <ScreenHeader title={editing ? "Editar remédio" : "Novo remédio"} back={editing ? "/remedios" : "/"} />
 
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
         <div className="flex flex-col gap-5">
           <fieldset>
-            <legend className="mb-2 text-[17px] font-semibold">Para quem?</legend>
-            <div className="flex gap-2.5">
-              {kids.map((k) => (
-                <button
-                  key={k.id}
-                  type="button"
-                  onClick={() => setChildId(k.id)}
-                  aria-pressed={selectedChild === k.id}
-                  className="btn h-14 flex-1 text-[17px]"
-                  style={{
-                    background: selectedChild === k.id ? k.fill : "var(--color-white)",
-                    boxShadow: selectedChild === k.id ? undefined : "none",
-                  }}
-                >
-                  <Avatar fill={k.fill} size={32} />
-                  {k.name}
-                </button>
-              ))}
+            <legend className="label">
+              Para qual criança é o remédio? <span className="req">*</span>
+            </legend>
+            <div className="grid grid-cols-2 gap-2.5">
+              {kids.map((k) => {
+                const on = selectedChild === k.id;
+                return (
+                  <button
+                    key={k.id}
+                    type="button"
+                    onClick={() => setChildId(k.id)}
+                    aria-pressed={on}
+                    className={
+                      "flex h-14 min-w-0 items-center gap-2.5 rounded-2xl border-[1.5px] px-3 text-left text-[17px] font-extrabold " +
+                      (on ? "border-brand bg-brand-soft" : "border-line bg-white")
+                    }
+                  >
+                    <Avatar fill={k.fill} photo={k.photoUrl} size={34} />
+                    <span className="min-w-0 flex-1 truncate">{k.name}</span>
+                    {on && (
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand text-[#ffffff]">
+                        <CheckIcon size={14} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </fieldset>
 
           <div>
-            <label htmlFor="nome" className="mb-2 block text-[17px] font-semibold">
-              Nome do remédio
+            <label htmlFor="nome" className="label">
+              Nome do remédio <span className="req">*</span>
             </label>
-            <input id="nome" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Amoxicilina" />
+            <div className="field-wrap">
+              <BottleIcon />
+              <input id="nome" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Xarope Infantil" />
+            </div>
           </div>
 
           <div>
-            <label htmlFor="dose" className="mb-2 block text-[17px] font-semibold">
-              Dose (como está na receita)
+            <label htmlFor="dose" className="label">
+              Dose prescrita <span className="req">*</span>
             </label>
-            <input id="dose" className="field" value={doseText} onChange={(e) => setDoseText(e.target.value)} placeholder="Ex.: conforme a receita" />
+            <div className="flex items-center gap-2">
+              <div className="field-wrap flex-1">
+                <NoteIcon />
+                <input id="dose" className="field" value={doseText} onChange={(e) => setDoseText(e.target.value)} placeholder="Ex.: conforme orientação" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setDoseHelp((v) => !v)}
+                aria-expanded={doseHelp}
+                aria-controls="dose-ajuda"
+                aria-label="Sobre a dose"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full text-ink-soft"
+              >
+                <InfoIcon />
+              </button>
+            </div>
+            {doseHelp && (
+              <p id="dose-ajuda" className="mt-2 rounded-2xl bg-brand-soft p-3 text-sm leading-snug">
+                Escreva a dose exatamente como está na receita (por exemplo, &quot;5 ml&quot; ou &quot;1 gota em cada narina&quot;).
+                O app não calcula nem sugere doses.
+              </p>
+            )}
           </div>
 
           <div>
-            <label htmlFor="inicio" className="mb-2 block text-[17px] font-semibold">
-              Primeira dose às
+            <label htmlFor="inicio" className="label">
+              Horário da primeira dose <span className="req">*</span>
             </label>
             <div className="flex items-center gap-2.5">
-              <input id="inicio" type="time" className="field flex-1 text-[1.4rem] font-semibold" value={time} onChange={(e) => setTime(e.target.value)} />
-              {medication ? (
-                <p className="text-sm font-medium text-ink-soft">Começou em {fmtDate(medication.firstDoseAt)}</p>
-              ) : (
-              <div className="flex gap-1.5" role="group" aria-label="Dia da primeira dose">
-                <button type="button" aria-pressed={!startTomorrow} onClick={() => setStartTomorrow(false)} className={"btn h-[3.25rem] px-3 text-base " + (!startTomorrow ? "bg-sky" : "bg-white text-ink-soft")}>
-                  Hoje
-                </button>
-                <button type="button" aria-pressed={startTomorrow} onClick={() => setStartTomorrow(true)} className={"btn h-[3.25rem] px-3 text-base " + (startTomorrow ? "bg-sky" : "bg-white text-ink-soft")}>
-                  Amanhã
-                </button>
+              <div className="field-wrap flex-1">
+                <ClockIcon />
+                <input id="inicio" type="time" className="field" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
+              {medication ? (
+                <p className="text-sm font-semibold text-ink-soft">Começou em {fmtDate(medication.firstDoseAt)}</p>
+              ) : (
+                <div className="flex gap-1 rounded-2xl bg-track p-1" role="group" aria-label="Dia da primeira dose">
+                  {[false, true].map((tomorrow) => (
+                    <button
+                      key={String(tomorrow)}
+                      type="button"
+                      aria-pressed={startTomorrow === tomorrow}
+                      onClick={() => setStartTomorrow(tomorrow)}
+                      className={
+                        "h-11 rounded-xl px-3 text-[15px] font-bold " +
+                        (startTomorrow === tomorrow ? "bg-brand text-[#ffffff]" : "text-ink-soft")
+                      }
+                    >
+                      {tomorrow ? "Amanhã" : "Hoje"}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
 
-          <fieldset>
-            <legend className="mb-2 text-[17px] font-semibold">De quanto em quanto tempo?</legend>
-            <div className="flex gap-2">
-              {INTERVAL_PRESETS.map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  aria-pressed={intervalMinutes === h * 60}
-                  onClick={() => {
-                    setIh(String(h));
-                    setIm("0");
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label htmlFor="intervalo" className="label whitespace-nowrap text-[13px]">
+                Intervalo entre doses <span className="req">*</span>
+              </label>
+              <div className="field-wrap">
+                <RepeatIcon />
+                <select
+                  id="intervalo"
+                  className="field text-[15px]"
+                  value={customInterval ? "custom" : String(intervalMinutes)}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") return setIntervalMode("custom");
+                    const min = Number(e.target.value);
+                    setIntervalMode("preset");
+                    setIh(String(Math.floor(min / 60)));
+                    setIm(String(min % 60));
                   }}
-                  className={presetBtn(intervalMinutes === h * 60)}
                 >
-                  {h}h
-                </button>
-              ))}
+                  {!customInterval && !INTERVAL_PRESETS.includes(intervalMinutes / 60) && (
+                    <option value={String(intervalMinutes)}>a cada {formatInterval(intervalMinutes)}</option>
+                  )}
+                  {INTERVAL_PRESETS.map((h) => (
+                    <option key={h} value={String(h * 60)}>
+                      a cada {h} h
+                    </option>
+                  ))}
+                  <option value="custom">Outro intervalo…</option>
+                </select>
+              </div>
             </div>
-            <div className="mt-3 rounded-[1.1rem] border-[1.5px] border-dashed border-line bg-white p-3">
-              <p className="text-[15px] text-ink-soft">O médico passou outro tempo? Digite aqui:</p>
+            <div className="min-w-0">
+              <label htmlFor="duracao" className="label whitespace-nowrap text-[13px]">
+                Duração <span className="req">*</span>
+              </label>
+              <div className="field-wrap">
+                <CalendarIcon />
+                <select
+                  id="duracao"
+                  className="field text-[15px]"
+                  value={customDays ? "custom" : String(daysN)}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") return setDaysMode("custom");
+                    setDaysMode("preset");
+                    setDays(e.target.value);
+                  }}
+                >
+                  {!customDays && !DAY_PRESETS.includes(daysN) && (
+                    <option value={String(daysN)}>por {daysN} {daysN === 1 ? "dia" : "dias"}</option>
+                  )}
+                  {DAY_PRESETS.map((d) => (
+                    <option key={d} value={String(d)}>
+                      por {d} {d === 1 ? "dia" : "dias"}
+                    </option>
+                  ))}
+                  <option value="custom">Outra duração…</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {customInterval && (
+            <div className="rounded-2xl border-[1.5px] border-dashed border-line bg-white p-3">
+              <p className="text-[15px] text-ink-soft">O médico passou outro intervalo? Digite aqui:</p>
               <div className="mt-2 flex items-center gap-2">
                 <label htmlFor="ih" className="sr-only">Horas</label>
                 <input id="ih" type="number" inputMode="numeric" min={0} max={72} className="num" value={ih} onChange={(e) => setIh(e.target.value)} />
-                <span className="text-lg font-semibold">h</span>
+                <span className="text-lg font-bold">h</span>
                 <label htmlFor="im" className="sr-only">Minutos</label>
                 <input id="im" type="number" inputMode="numeric" min={0} max={59} className="num" value={im} onChange={(e) => setIm(e.target.value)} />
-                <span className="text-lg font-semibold">min</span>
+                <span className="text-lg font-bold">min</span>
               </div>
             </div>
-          </fieldset>
+          )}
 
-          <fieldset>
-            <legend className="mb-2 text-[17px] font-semibold">Por quantos dias?</legend>
-            <div className="flex gap-2">
-              {DAY_PRESETS.map((d) => (
-                <button key={d} type="button" aria-pressed={daysN === d} onClick={() => setDays(String(d))} className={presetBtn(daysN === d)}>
-                  {d} dias
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 rounded-[1.1rem] border-[1.5px] border-dashed border-line bg-white p-3">
-              <p className="text-[15px] text-ink-soft">Outra duração? Ajuste os dias:</p>
+          {customDays && (
+            <div className="rounded-2xl border-[1.5px] border-dashed border-line bg-white p-3">
+              <p className="text-[15px] text-ink-soft">Por quantos dias?</p>
               <div className="mt-2 flex items-center gap-2">
-                <button type="button" aria-label="Menos um dia" onClick={() => setDays(String(Math.max(1, daysN - 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-blush">
+                <button type="button" aria-label="Menos um dia" onClick={() => setDays(String(Math.max(1, daysN - 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-coral">
                   <MinusIcon />
                 </button>
                 <label htmlFor="dias" className="sr-only">Dias de tratamento</label>
                 <input id="dias" type="number" inputMode="numeric" min={1} max={MAX_DAYS} className="num" value={days} onChange={(e) => setDays(e.target.value)} />
-                <button type="button" aria-label="Mais um dia" onClick={() => setDays(String(Math.min(MAX_DAYS, daysN + 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-pale">
+                <button type="button" aria-label="Mais um dia" onClick={() => setDays(String(Math.min(MAX_DAYS, daysN + 1)))} className="btn size-[3.25rem] rounded-[0.9rem] bg-mint">
                   <PlusIcon size={22} />
                 </button>
-                <span className="text-lg font-semibold">dias</span>
+                <span className="text-lg font-bold">dias</span>
               </div>
             </div>
-          </fieldset>
+          )}
         </div>
 
         <div className="flex flex-col gap-5 lg:sticky lg:top-6">
           <section className="card p-4" aria-labelledby="como-ficam">
-            <h2 id="como-ficam" className="text-[1.4rem] font-semibold">Como vão ficar as doses</h2>
+            <h2 id="como-ficam" className="text-[1.25rem] font-extrabold">Como vão ficar as doses</h2>
             <p className="text-[15px] text-ink-soft">
               A cada {formatInterval(intervalMinutes)} ·{" "}
               {Number.isInteger(perDay) ? perDay : `cerca de ${Math.round(perDay * 10) / 10}`}{" "}
@@ -245,7 +334,7 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
             />
 
             {!repeatsDaily(intervalMinutes) && (
-              <p className="mt-1 rounded-2xl border border-line bg-sky p-2.5 text-sm leading-snug">
+              <p className="mt-1 rounded-2xl border border-line bg-brand-soft p-2.5 text-sm leading-snug">
                 Com esse intervalo, os horários mudam um pouco a cada dia. O app recalcula tudo para você.
               </p>
             )}
@@ -255,19 +344,19 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
                 Se o médico permitir, mude a primeira dose para encaixar melhor.
               </p>
             )}
-            <p className="mt-2 border-t border-dashed border-line pt-2.5 text-[17px] font-semibold">
+            <p className="mt-2 border-t border-dashed border-line pt-2.5 text-[17px] font-extrabold">
               {daysN} {daysN === 1 ? "dia" : "dias"} · {total} {total === 1 ? "dose" : "doses"} no total
             </p>
           </section>
 
           {error && (
-            <p role="alert" className="rounded-2xl border border-line bg-blush p-3 text-base font-semibold">
+            <p role="alert" className="rounded-2xl border border-line bg-coral p-3 text-base font-bold">
               {error}
             </p>
           )}
 
           <button onClick={onSave} disabled={saving} className="btn btn-primary h-[3.75rem] text-xl">
-            <CheckIcon size={24} /> {editing ? "Salvar alterações" : "Salvar remedinho"}
+            <CheckIcon size={24} /> {editing ? "Salvar alterações" : "Salvar remédio"}
           </button>
         </div>
       </div>

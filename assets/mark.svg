@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 150">
+  <!-- Marca do Cuidaí Kids: rosto da ursa do mascote, com um coração. -->
+  <circle cx="34" cy="34" r="22" fill="#b9773f"/>
+  <circle cx="126" cy="34" r="22" fill="#b9773f"/>
+  <circle cx="34" cy="34" r="12" fill="#eecb9f"/>
+  <circle cx="126" cy="34" r="12" fill="#eecb9f"/>
+  <ellipse cx="80" cy="84" rx="68" ry="62" fill="#b9773f"/>
+  <ellipse cx="80" cy="106" rx="29" ry="21" fill="#eecb9f"/>
+  <ellipse cx="80" cy="96" rx="10" ry="7.5" fill="#3a2418"/>
+  <path d="M71 108q9 9 18 0" stroke="#3a2418" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="56" cy="77" r="6" fill="#3a2418"/>
+  <circle cx="104" cy="77" r="6" fill="#3a2418"/>
+  <circle cx="57.8" cy="75.2" r="1.9" fill="#fff"/>
+  <circle cx="105.8" cy="75.2" r="1.9" fill="#fff"/>
+  <ellipse cx="42" cy="100" rx="9" ry="6" fill="#f29a8a" opacity=".65"/>
+  <ellipse cx="118" cy="100" rx="9" ry="6" fill="#f29a8a" opacity=".65"/>
+  <path transform="translate(128 2) scale(2.3)" d="M0 3.2C0-.6 4.6-1.8 6.4 1.4 8.2-1.8 12.8-.6 12.8 3.2c0 4-6.4 8.3-6.4 8.3S0 7.2 0 3.2z" fill="#f4604a" stroke="#fbf5ec" stroke-width=".9"/>
+</svg>

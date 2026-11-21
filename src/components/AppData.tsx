@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiUpload } from "@/lib/api";
 import { startOfDay } from "@/lib/format";
 import { useNow } from "@/hooks/useNow";
 import type { AppState, NewMedication } from "@/lib/types";
@@ -17,6 +17,8 @@ interface Actions {
   addChild(): Promise<void>;
   updateChild(id: number, patch: { name?: string; fill?: string }): Promise<void>;
   deleteChild(id: number): Promise<void>;
+  setChildPhoto(id: number, photo: Blob): Promise<void>;
+  removeChildPhoto(id: number): Promise<void>;
   createFamily(): Promise<void>;
   joinFamily(code: string): Promise<void>;
   leaveFamily(): Promise<void>;
@@ -113,6 +115,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       addChild: () => run(() => api("POST", "/api/children")),
       updateChild: (id, patch) => run(() => api("PATCH", `/api/children/${id}`, patch)),
       deleteChild: (id) => run(() => api("DELETE", `/api/children/${id}`)),
+      setChildPhoto: (id, photo) => run(() => apiUpload(`/api/children/${id}/photo`, photo)),
+      removeChildPhoto: (id) => run(() => api("DELETE", `/api/children/${id}/photo`)),
       createFamily: () => run(() => api("POST", "/api/family")),
       joinFamily: (code) => run(() => api("POST", "/api/family/join", { code })),
       leaveFamily: async () => {

@@ -1,8 +1,8 @@
-/* Service worker do Hora do Remedinho.
+/* Service worker do Cuidaí Kids.
    1) Avisos (push): mostra a notificação da dose e deixa marcar "Já dei" direto nela.
    2) Offline: páginas rede primeiro, arquivos estáticos cache primeiro. Nunca guarda /api/.
    Em localhost não guarda nada em cache (evita servir arquivos velhos durante o desenvolvimento). */
-const CACHE = "remedinho-v3";
+const CACHE = "cuidai-kids-v1";
 const IS_DEV = ["localhost", "127.0.0.1", "[::1]"].includes(self.location.hostname);
 
 self.addEventListener("install", (event) => {
@@ -67,7 +67,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title || "Hora do remédio", {
       body: data.body || "Abra o app para ver.",
       // Mesma tag + renotify: o lembrete repetido substitui o anterior e volta a tocar.
-      tag: data.tag || "remedinho",
+      tag: data.tag || "cuidai-kids",
       renotify: true,
       // Fica na tela até alguém mexer, para não passar batido.
       requireInteraction: true,

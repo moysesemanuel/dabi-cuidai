@@ -1,4 +1,4 @@
--- Esquema do Hora do Remedinho. Datas são epoch em milissegundos (bigint), como no app.
+-- Esquema do Cuidaí Kids. Datas são epoch em milissegundos (bigint), como no app.
 create extension if not exists pgcrypto;
 
 create table if not exists families (
@@ -68,3 +68,9 @@ create table if not exists rate_limits (
   window_start bigint not null,
   count integer not null
 );
+
+-- Foto da criança: já chega do aparelho recortada em 256×256 e comprimida (WebP ou JPEG, poucos KB).
+-- photo_version muda a cada troca, para o endereço da imagem mudar e o cache do navegador não mostrar a antiga.
+alter table children add column if not exists photo bytea;
+alter table children add column if not exists photo_type text;
+alter table children add column if not exists photo_version bigint;

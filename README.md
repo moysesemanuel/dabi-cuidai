@@ -1,4 +1,6 @@
-# Hora do Remedinho
+# Cuidaí Kids
+
+Lembrete de remédios para a saúde das crianças.
 
 App web (PWA instalável) para lembrar os horários de remédios das crianças. Feito com Next.js (App Router), TypeScript e Tailwind. Os dados ficam em um banco Postgres compartilhado pela família (a versão antiga guardava só no aparelho; o app oferece importar esses dados uma vez).
 
@@ -16,8 +18,8 @@ npm run icons                # regenera os ícones do PWA
 
 ## Como funciona agora
 
-- Os remédios ficam **no servidor** (Postgres), ligados a uma **família**. O primeiro celular cria a família e recebe um código (`XXXX-XXXX-XXXX`); o segundo entra com esse código em Ajustes. Não há senha: quem tem o código vê os remédios, então ele deve ser compartilhado só com quem cuida dos bebês.
-- **Avisos (web push):** em Ajustes, "Ativar avisos neste celular" inscreve o aparelho. Um agendador (Upstash QStash, a cada 2 minutos) chama `POST /api/cron/dispatch`, que avisa a família inteira das doses vencidas. Se ninguém marcar "Já dei", repete a cada 10 minutos, até 6 vezes. Doses com mais de 3 horas de atraso não geram aviso novo (seguem "atrasadas" na tela).
+- Os remédios ficam **no servidor** (Postgres), ligados a uma **família**. O primeiro celular cria a família e recebe um código (`XXXX-XXXX-XXXX`); o segundo entra com esse código em Ajustes. Não há senha: quem tem o código vê os remédios, então ele deve ser compartilhado só com quem cuida das crianças.
+- **Avisos (web push):** em Ajustes, "Ativar avisos neste celular" inscreve o aparelho. Cada dose agenda no Upstash QStash uma chamada de `POST /api/cron/dispatch` para o horário exato dela; essa chamada avisa a família inteira e agenda a próxima. Um *Schedule* de hora em hora no QStash serve só de rede de segurança. Se ninguém marcar "Já dei", repete a cada 10 minutos, até 6 vezes. Doses com mais de 3 horas de atraso não geram aviso novo (seguem "atrasadas" na tela).
 - A notificação tem o botão **Já dei**, que marca a dose sem abrir o app (no iPhone o botão não existe; tocar abre o app).
 - iPhone: avisos só com o app instalado na Tela de Início (iOS 16.4+). Android: funciona no Chrome.
 
@@ -25,10 +27,10 @@ npm run icons                # regenera os ícones do PWA
 
 1. **Neon**: crie um projeto Postgres e copie a connection string *pooled* → `DATABASE_URL`.
 2. **Chaves de push**: `npx web-push generate-vapid-keys` → `NEXT_PUBLIC_VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY`. `VAPID_SUBJECT=mailto:seu@email.com`.
-3. **Upstash QStash**: copie `QSTASH_CURRENT_SIGNING_KEY` e `QSTASH_NEXT_SIGNING_KEY`.
+3. **Upstash QStash**: copie `QSTASH_URL`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY` e `QSTASH_NEXT_SIGNING_KEY`. Sem um `QSTASH_TOKEN` válido os avisos só saem na hora cheia (pelo vigia horário).
 4. **Vercel**: importe o projeto e cadastre as variáveis acima (Settings > Environment Variables). Faça o deploy.
 5. **Tabelas**: uma vez, com a URL de produção: `DATABASE_URL="postgres://..." node scripts/migrate.mjs`.
-6. **Agendador**: no QStash crie um *Schedule* com destino `https://SEU-DOMINIO/api/cron/dispatch`, método POST, cron `*/2 * * * *`. O plano gratuito do QStash (1.000 mensagens/dia) comporta isso (720/dia).
+6. **Agendador**: no QStash crie um *Schedule* com destino `https://SEU-DOMINIO/api/cron/dispatch`, método POST, cron `0 * * * *` (vigia horário). Os avisos de cada dose são agendados pelo próprio app.
 7. Em cada celular: abra o endereço, crie/entre na família, instale na Tela de Início (iPhone) e toque em **Ativar avisos** e depois em **Enviar aviso de teste**.
 
 > A Vercel gratuita só roda cron uma vez por dia, por isso o relógio é o QStash. Se quiser tudo na Vercel, o plano Pro permite cron por minuto.
@@ -36,10 +38,10 @@ npm run icons                # regenera os ícones do PWA
 ## O que já funciona (etapas 1 e 2 do plano)
 
 - Instalável no celular e no desktop (manifest + service worker simples, abre sem internet).
-- **Novo remédio**: bebê, nome, dose em texto livre (como na receita), horário da primeira dose, intervalo livre (atalhos 4/6/8/12 h ou horas + minutos digitados) e duração livre (atalhos ou 1 a 60 dias).
+- **Novo remédio**: criança, nome, dose em texto livre (como na receita), horário da primeira dose, intervalo livre (atalhos 4/6/8/12 h ou horas + minutos digitados) e duração livre (atalhos ou 1 a 60 dias).
 - Timeline ao vivo antes de salvar: régua de 24 h, régua com os números das horas, aviso de "hora de dormir" (20h–6h) e de coincidência com outros remédios.
-- **Hoje**: próxima dose, "Já dei!", lista de doses pendentes e já dadas, filtro por bebê, desfazer.
-- **Remédios** (lista com a timeline de cada um, **editar** e remover; ao editar, as doses pendentes de hoje em diante são refeitas; doses já dadas e dias anteriores ficam como estão) e **Ajustes** (nome e cor dos bebês, instalar o app).
+- **Hoje**: próxima dose, "Já dei!", lista de doses pendentes e já dadas, filtro por criança, desfazer.
+- **Remédios** (lista agrupada por criança, com horários e duração, **editar** e remover; ao editar, as doses pendentes de hoje em diante são refeitas; doses já dadas e dias anteriores ficam como estão) e **Ajustes** (nome e cor das crianças, instalar o app).
 
 ## Estrutura
 

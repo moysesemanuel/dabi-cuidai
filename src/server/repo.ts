@@ -26,7 +26,7 @@ const int = (value: unknown, min: number, max: number, label: string): number =>
 export function parseMedication(body: Record<string, unknown>): NewMedication {
   const now = Date.now();
   return {
-    childId: int(body.childId, 1, Number.MAX_SAFE_INTEGER, "Bebê"),
+    childId: int(body.childId, 1, Number.MAX_SAFE_INTEGER, "Criança"),
     name: text(body.name, 100, "Nome do remédio", true),
     doseText: text(body.doseText ?? "", 200, "Dose", false),
     intervalMinutes: int(body.intervalMinutes, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES, "Intervalo"),
@@ -38,7 +38,7 @@ export function parseMedication(body: Record<string, unknown>): NewMedication {
 
 // ---------- leitura ----------
 
-interface ChildRow { id: number; name: string; fill: string }
+interface ChildRow { id: number; name: string; fill: string; photo_version: number | null }
 interface MedRow { id: number; child_id: number; name: string; dose_text: string; interval_minutes: number; first_dose_at: number; days: number; created_at: number }
 interface DoseRow { id: number; medication_id: number; scheduled_at: number; status: "pending" | "given"; given_at: number | null }
 
@@ -50,7 +50,7 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
     select count(distinct s.device_id)::bigint as "pushCount"
     from push_subscriptions s join devices d on d.id = s.device_id where d.family_id = ${familyId}`;
   const children = await sql<ChildRow[]>`
-    select id, name, fill from children where family_id = ${familyId} order by id`;
+    select id, name, fill, photo_version from children where family_id = ${familyId} order by id`;
   const meds = await sql<MedRow[]>`
     select id, child_id, name, dose_text, interval_minutes, first_dose_at, days, created_at
     from medications where family_id = ${familyId} order by id`;
@@ -64,7 +64,14 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
     deviceId: session.deviceId,
     deviceCount: count,
     pushDeviceCount: pushCount,
-    children: children.map((c): Child => ({ id: c.id, name: c.name, fill: c.fill })),
+    children: children.map(
+      (c): Child => ({
+        id: c.id,
+        name: c.name,
+        fill: c.fill,
+        photoUrl: c.photo_version ? `/api/children/${c.id}/photo?v=${c.photo_version}` : undefined,
+      }),
+    ),
     medications: meds.map(
       (m): Medication => ({
         id: m.id,
@@ -89,14 +96,14 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
   };
 }
 
-// ---------- bebês ----------
+// ---------- crianças ----------
 
 export async function addChild(session: Session): Promise<void> {
   const kids = await sql<{ fill: string }[]>`select fill from children where family_id = ${session.familyId}`;
   const color = CHILD_COLORS.find((c) => !kids.some((k) => k.fill === c.fill)) ?? CHILD_COLORS[kids.length % CHILD_COLORS.length];
   await sql`
     insert into children (family_id, name, fill, created_at)
-    values (${session.familyId}, ${`Bebê ${kids.length + 1}`}, ${color.fill}, ${Date.now()})`;
+    values (${session.familyId}, ${`Criança ${kids.length + 1}`}, ${color.fill}, ${Date.now()})`;
 }
 
 export async function updateChild(session: Session, id: number, body: Record<string, unknown>): Promise<void> {
@@ -107,23 +114,60 @@ export async function updateChild(session: Session, id: number, body: Record<str
   const rows = await sql`
     update children set name = coalesce(${name ?? null}, name), fill = coalesce(${fill ?? null}, fill)
     where id = ${id} and family_id = ${session.familyId} returning id`;
-  if (!rows.length) throw new HttpError(404, "Bebê não encontrado.");
+  if (!rows.length) throw new HttpError(404, "Criança não encontrada.");
 }
 
 export async function deleteChild(session: Session, id: number): Promise<void> {
   const [{ count }] = await sql<{ count: number }[]>`
     select count(*)::bigint as count from children where family_id = ${session.familyId}`;
-  if (count <= 1) throw new HttpError(400, "É preciso manter pelo menos um bebê.");
+  if (count <= 1) throw new HttpError(400, "É preciso manter pelo menos uma criança.");
   // Remédios e doses saem junto (on delete cascade).
   const rows = await sql`delete from children where id = ${id} and family_id = ${session.familyId} returning id`;
-  if (!rows.length) throw new HttpError(404, "Bebê não encontrado.");
+  if (!rows.length) throw new HttpError(404, "Criança não encontrada.");
+}
+
+// ---------- foto da criança ----------
+
+/** Tamanho máximo aceito. O app envia 256×256 comprimido (≈10–30 KB); isso deixa folga sem aceitar fotos cruas. */
+export const MAX_PHOTO_BYTES = 150_000;
+
+/** Confere pelos primeiros bytes que é mesmo WebP ou JPEG, sem confiar só no cabeçalho da requisição. */
+export function photoType(bytes: Uint8Array): "image/webp" | "image/jpeg" | null {
+  const ascii = (from: number, to: number) => String.fromCharCode(...bytes.subarray(from, to));
+  if (bytes.length > 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
+  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  return null;
+}
+
+export async function setChildPhoto(session: Session, id: number, bytes: Uint8Array): Promise<void> {
+  if (bytes.length === 0) throw new HttpError(400, "Foto vazia.");
+  if (bytes.length > MAX_PHOTO_BYTES) throw new HttpError(413, "Foto grande demais.");
+  const type = photoType(bytes);
+  if (!type) throw new HttpError(415, "Formato de foto não aceito.");
+  const rows = await sql`
+    update children set photo = ${Buffer.from(bytes)}, photo_type = ${type}, photo_version = ${Date.now()}
+    where id = ${id} and family_id = ${session.familyId} returning id`;
+  if (!rows.length) throw new HttpError(404, "Criança não encontrada.");
+}
+
+export async function getChildPhoto(session: Session, id: number): Promise<{ bytes: Buffer; type: string } | null> {
+  const [row] = await sql<{ photo: Buffer | null; photo_type: string | null }[]>`
+    select photo, photo_type from children where id = ${id} and family_id = ${session.familyId}`;
+  return row?.photo && row.photo_type ? { bytes: row.photo, type: row.photo_type } : null;
+}
+
+export async function deleteChildPhoto(session: Session, id: number): Promise<void> {
+  const rows = await sql`
+    update children set photo = null, photo_type = null, photo_version = null
+    where id = ${id} and family_id = ${session.familyId} returning id`;
+  if (!rows.length) throw new HttpError(404, "Criança não encontrada.");
 }
 
 // ---------- remédios ----------
 
 async function assertChild(session: Session, childId: number): Promise<void> {
   const rows = await sql`select 1 from children where id = ${childId} and family_id = ${session.familyId}`;
-  if (!rows.length) throw new HttpError(400, "Bebê não encontrado.");
+  if (!rows.length) throw new HttpError(400, "Criança não encontrada.");
 }
 
 const doseRows = (familyId: string, medicationId: number, times: number[]) =>
@@ -202,8 +246,8 @@ export function parseImport(body: Record<string, unknown>): ImportBody {
       return v as Record<string, unknown>;
     });
   };
-  const children = list(body.children, 20, "Bebês").map((c) => ({
-    id: int(c.id, 1, Number.MAX_SAFE_INTEGER, "Bebê"),
+  const children = list(body.children, 20, "Crianças").map((c) => ({
+    id: int(c.id, 1, Number.MAX_SAFE_INTEGER, "Criança"),
     name: text(c.name, 30, "Nome", true),
     fill: CHILD_COLORS.find((x) => x.fill === c.fill)?.fill ?? CHILD_COLORS[0].fill,
   }));

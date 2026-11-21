@@ -10,6 +10,8 @@ export interface Child {
   id: number;
   name: string;
   fill: string;
+  /** Endereço da foto (muda a cada troca). Sem foto, o app desenha o rostinho na cor da criança. */
+  photoUrl?: string;
 }
 
 export interface Medication {

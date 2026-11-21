@@ -3,10 +3,10 @@ import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "Hora do Remedinho",
-  description: "Lembrete de remédios para crianças, com horários fáceis de ver.",
-  applicationName: "Hora do Remedinho",
-  appleWebApp: { capable: true, title: "Remedinho", statusBarStyle: "default" },
+  title: "Cuidaí Kids",
+  description: "Lembrete de remédios para a saúde das crianças.",
+  applicationName: "Cuidaí Kids",
+  appleWebApp: { capable: true, title: "Cuidaí Kids", statusBarStyle: "black-translucent" },
   icons: {
     icon: "/icons/icon-192.png",
     apple: "/icons/apple-touch-icon.png",
@@ -14,10 +14,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // A barra de status acompanha a faixa verde do topo das telas.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F6F5F9" },
-    { media: "(prefers-color-scheme: dark)", color: "#14172A" },
+    { media: "(prefers-color-scheme: light)", color: "#0F6E6C" },
+    { media: "(prefers-color-scheme: dark)", color: "#2A9D96" },
   ],
+  viewportFit: "cover",
   width: "device-width",
   initialScale: 1,
 };
@@ -35,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
       </head>

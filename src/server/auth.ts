@@ -40,14 +40,14 @@ async function attachDevice(familyId: string, label: string | null): Promise<voi
   });
 }
 
-/** Cria uma família nova (com um bebê inicial) e já conecta este aparelho a ela. */
+/** Cria uma família nova (com uma criança inicial) e já conecta este aparelho a ela. */
 export async function createFamily(label: string | null): Promise<string> {
   const code = newCode();
   const [family] = await sql<{ id: string }[]>`
     insert into families (code, created_at) values (${code}, ${Date.now()}) returning id`;
   await sql`
     insert into children (family_id, name, fill, created_at)
-    values (${family.id}, 'Bebê 1', '#FFAFA3', ${Date.now()})`;
+    values (${family.id}, 'Criança 1', '#FFAFA3', ${Date.now()})`;
   await attachDevice(family.id, label);
   return code;
 }

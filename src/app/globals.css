@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /*
-  Cores por papel, não por matiz: o claro e o escuro trocam só os valores abaixo.
-  Pastéis marcam o significado (verde = dado, coral = atrasado, roxo = hora de dormir, azul = navegação).
+  Cuidaí Kids. Cores por papel, não por matiz: o claro e o escuro trocam só os valores abaixo.
+  Verde-petróleo = marca e navegação; coral = ação principal e atraso; amarelo = pendente; verde = dado.
 */
 @theme {
   --color-ink: var(--c-ink);
@@ -11,88 +11,104 @@
   --color-white: var(--c-surface);
   --color-line: var(--c-line);
   --color-track: var(--c-track);
+  --color-field: var(--c-field);
+  --color-brand: var(--c-brand);
+  --color-brand-soft: var(--c-brand-soft);
+  --color-cta: var(--c-cta);
   --color-sun: var(--c-sun);
+  --color-sun-ink: var(--c-sun-ink);
   --color-mint: var(--c-mint);
   --color-coral: var(--c-coral);
+  --color-danger: var(--c-danger);
   --color-lilac: var(--c-lilac);
-  --color-cream: var(--c-cream);
-  --color-pale: var(--c-pale);
-  --color-blush: var(--c-blush);
-  --color-sky: var(--c-sky);
-  --color-accent: var(--c-accent);
-  --color-primary: var(--c-primary);
-  --font-sans: "Figtree", system-ui, sans-serif;
+  /* Nomes antigos, mantidos como apelidos dos papéis novos. */
+  --color-sky: var(--c-brand-soft);
+  --color-pale: var(--c-mint);
+  --color-blush: var(--c-coral);
+  --color-cream: var(--c-sun);
+  --color-accent: var(--c-brand);
+  --font-sans: "Nunito", system-ui, sans-serif;
+  --font-display: "Fredoka", "Nunito", system-ui, sans-serif;
 }
 
 :root {
   color-scheme: light;
-  --c-paper: #faf9f8;
+  --c-paper: #fbf5ec;
   --c-surface: #ffffff;
-  --c-line: #ebe8e4;
-  --c-track: #efedf2;
-  --c-ink: #2b2f3c;
-  --c-ink-soft: #6c7080;
-  --c-accent: #4f6fd6;
-  --c-sun: #fbeab8;
-  --c-mint: #cfeadb;
-  --c-pale: #e2f3ea;
-  --c-coral: #f7b9ad;
-  --c-blush: #fbe3e0;
-  --c-lilac: #e8e3f6;
-  --c-cream: #fdf3d5;
-  --c-sky: #dce7fb;
-  --c-primary: #f9d71c;
-  --c-dose: #4cb98c;
+  --c-field: #f6f4f1;
+  --c-line: #e5dfd5;
+  --c-track: #f1ece4;
+  --c-ink: #1c3a3e;
+  --c-ink-soft: #5b6e71;
+  --c-brand: #0f6e6c;
+  --c-brand-soft: #d9f0ec;
+  --c-cta: #f4604a;
+  --c-sun: #fde9a6;
+  --c-sun-ink: #7a5600;
+  --c-mint: #d6f1e2;
+  --c-coral: #fdd9d1;
+  --c-danger: #d9483b;
+  --c-lilac: #e9e4f7;
+  --c-dose: #2f9e83;
   --c-dose-night: #9f8fe0;
-  --shadow-card: 0 1px 2px rgb(40 36 30 / 0.04);
+  --c-blob-a: #3fb3a8;
+  --c-blob-b: #f6866f;
+  --shadow-card: 0 2px 6px rgb(28 58 62 / 0.06);
+  --shadow-cta: 0 8px 18px -8px rgb(244 96 74 / 0.7);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --c-paper: #15171f;
-    --c-surface: #1e212b;
-    --c-line: #2f3342;
-    --c-track: #2a2e3d;
-    --c-ink: #eceef6;
-    --c-ink-soft: #a5abbf;
-    --c-accent: #8fa8f0;
-    --c-sun: #3c4478;
-    --c-mint: #1f5a46;
-    --c-pale: #1d4a3c;
-    --c-coral: #84433a;
-    --c-blush: #6b3b38;
-    --c-lilac: #433a70;
-    --c-cream: #4b4122;
-    --c-sky: #28426f;
-    --c-primary: #f0cf27;
-    --c-dose: #5fd3a2;
+    --c-paper: #0f1b1d;
+    --c-surface: #172628;
+    --c-field: #1d2f31;
+    --c-line: #2a3e40;
+    --c-track: #213335;
+    --c-ink: #e8f2f1;
+    --c-ink-soft: #9db3b3;
+    --c-brand: #2a9d96;
+    --c-brand-soft: #1b4441;
+    --c-cta: #f4604a;
+    --c-sun: #574515;
+    --c-sun-ink: #fde9a6;
+    --c-mint: #1c4636;
+    --c-coral: #5a2d27;
+    --c-danger: #ff8a7c;
+    --c-lilac: #39345f;
+    --c-dose: #4fd1ad;
     --c-dose-night: #b3a4f2;
+    --c-blob-a: #1d5c57;
+    --c-blob-b: #7a3b30;
     --shadow-card: none;
+    --shadow-cta: none;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --c-primary: #f0cf27;
-  --c-paper: #15171f;
-  --c-surface: #1e212b;
-  --c-line: #2f3342;
-  --c-track: #2a2e3d;
-  --c-ink: #eceef6;
-  --c-ink-soft: #a5abbf;
-  --c-accent: #8fa8f0;
-  --c-sun: #3c4478;
-  --c-mint: #1f5a46;
-  --c-pale: #1d4a3c;
-  --c-coral: #84433a;
-  --c-blush: #6b3b38;
-  --c-lilac: #433a70;
-  --c-cream: #4b4122;
-  --c-sky: #28426f;
-  --c-dose: #5fd3a2;
+  --c-paper: #0f1b1d;
+  --c-surface: #172628;
+  --c-field: #1d2f31;
+  --c-line: #2a3e40;
+  --c-track: #213335;
+  --c-ink: #e8f2f1;
+  --c-ink-soft: #9db3b3;
+  --c-brand: #2a9d96;
+  --c-brand-soft: #1b4441;
+  --c-cta: #f4604a;
+  --c-sun: #574515;
+  --c-sun-ink: #fde9a6;
+  --c-mint: #1c4636;
+  --c-coral: #5a2d27;
+  --c-danger: #ff8a7c;
+  --c-lilac: #39345f;
+  --c-dose: #4fd1ad;
   --c-dose-night: #b3a4f2;
+  --c-blob-a: #1d5c57;
+  --c-blob-b: #7a3b30;
   --shadow-card: none;
+  --shadow-cta: none;
 }
 
 html {
@@ -107,7 +123,7 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid var(--c-accent);
+  outline: 3px solid var(--c-brand);
   outline-offset: 2px;
 }
 
@@ -115,45 +131,41 @@ body {
   .card {
     background: var(--c-surface);
     border: 1px solid var(--c-line);
-    border-radius: 1.125rem;
+    border-radius: 1.25rem;
     box-shadow: var(--shadow-card);
   }
 
-  /* Ação principal: amarelo, como nas telas de referência. */
-  .btn-primary {
-    background: var(--c-primary);
-    border-color: transparent;
-    color: #2b2f3c;
+  /* Barra do topo de cada tela: faixa verde-petróleo de ponta a ponta no celular, cartão no computador. */
+  .appbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4.25rem;
+    margin: 0 -1.25rem 1.25rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 0.9rem) 1.25rem 1rem;
+    border-radius: 0 0 1.5rem 1.5rem;
+    background: var(--c-brand);
+    color: #ffffff;
   }
-
-  /* Filtro em forma de pílula reta (cantos de 12px), com ou sem contador. */
-  .chip {
+  @media (min-width: 1024px) {
+    .appbar {
+      margin: 0 0 1.5rem;
+      padding: 1rem 1.5rem;
+      border-radius: 1.25rem;
+    }
+  }
+  .appbar-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    height: 2.5rem;
-    padding: 0 0.85rem;
-    border: 1px solid var(--c-line);
-    border-radius: 0.8rem;
-    background: var(--c-surface);
-    color: var(--c-ink-soft);
-    font-size: 0.9375rem;
-    font-weight: 600;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 0.9rem;
+    color: #ffffff;
   }
-  .chip[aria-pressed="true"] {
-    background: var(--c-sky);
-    border-color: transparent;
-    color: var(--c-ink);
-  }
-
-  /* Rótulo de grupo nas telas de ajustes. */
-  .group-label {
-    padding: 0 0.25rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--c-ink-soft);
+  .appbar-btn:active {
+    background: rgb(255 255 255 / 0.15);
   }
 
   .btn {
@@ -164,7 +176,7 @@ body {
     border: 1px solid color-mix(in srgb, var(--c-ink) 12%, transparent);
     border-radius: 0.9rem;
     color: var(--c-ink);
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition:
       transform 90ms,
@@ -179,19 +191,120 @@ body {
     cursor: not-allowed;
   }
 
+  /* Ação principal: coral, como "Já dei", "Criar minha família" e "Salvar remédio". */
+  .btn-primary {
+    background: var(--c-cta);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: var(--shadow-cta);
+  }
+  /* Ação da marca: verde-petróleo cheio, como "Adicionar remédio". */
+  .btn-brand {
+    background: var(--c-brand);
+    border-color: transparent;
+    color: #ffffff;
+  }
+  .btn-outline {
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-brand);
+    color: var(--c-brand);
+  }
+  .btn-danger {
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-danger);
+    color: var(--c-danger);
+  }
+  :root[data-theme="dark"] .btn-outline {
+    color: var(--c-ink);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .btn-outline {
+      color: var(--c-ink);
+    }
+  }
+
+  /* Filtro em pílula, com avatar ou ícone. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 2.6rem;
+    padding: 0 1rem;
+    border: 1.5px solid var(--c-line);
+    border-radius: 999px;
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font-size: 0.9375rem;
+    font-weight: 700;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--c-brand);
+    border-color: var(--c-brand);
+    color: #ffffff;
+  }
+
+  /* Rótulo de grupo nas telas de ajustes e acima dos filtros. */
+  .group-label {
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--c-ink-soft);
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .label .req {
+    color: var(--c-cta);
+  }
+
   .field {
     width: 100%;
     height: 3.25rem;
-    border: 1px solid var(--c-line);
+    border: 1.5px solid var(--c-line);
     border-radius: 0.9rem;
-    background: var(--c-surface);
+    background: var(--c-field);
     padding: 0 1rem;
-    font-size: 1.125rem;
-    font-weight: 500;
+    font-size: 1.0625rem;
+    font-weight: 600;
     color: var(--c-ink);
   }
+  .field::placeholder {
+    color: var(--c-ink-soft);
+    font-weight: 500;
+  }
   .field:focus {
-    border-color: var(--c-accent);
+    border-color: var(--c-brand);
+    background: var(--c-surface);
+  }
+
+  /* Campo com ícone à esquerda: o ícone fica dentro da caixa, como no cadastro do mockup. */
+  .field-wrap {
+    position: relative;
+  }
+  .field-wrap > svg {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--c-ink-soft);
+    pointer-events: none;
+  }
+  .field-wrap > .field {
+    padding-left: 3rem;
+  }
+  select.field {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235b6e71' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    text-overflow: ellipsis;
   }
 
   .num {
@@ -199,10 +312,10 @@ body {
     height: 3.25rem;
     border: 1.5px solid var(--c-line);
     border-radius: 0.9rem;
-    background: var(--c-cream);
+    background: var(--c-field);
     text-align: center;
     font-size: 1.375rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--c-ink);
   }
 
@@ -211,28 +324,49 @@ body {
     border-radius: 999px;
   }
 
-  /* Botão + : flutua sobre a barra inferior no celular e volta ao cabeçalho em telas largas. */
-  .fab {
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 800;
+  }
+  .badge-pending {
+    background: var(--c-sun);
+    color: var(--c-sun-ink);
+  }
+  .badge-late {
+    background: var(--c-cta);
+    color: #ffffff;
+  }
+
+  /* Quadradinho com ícone, como nas vantagens da tela de boas-vindas. */
+  .icon-tile {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 999px;
-    background: var(--c-coral);
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.85rem;
+    background: var(--c-brand-soft);
+    color: var(--c-brand);
+  }
+  :root[data-theme="dark"] .icon-tile {
     color: var(--c-ink);
-    box-shadow: 0 10px 22px -8px rgb(247 120 100 / 0.55);
-    transition: transform 90ms;
   }
-  .fab:active {
-    transform: scale(0.94);
-  }
-  @media (max-width: 1023.98px) {
-    .fab {
-      position: fixed;
-      right: 1.25rem;
-      bottom: calc(76px + 1rem + env(safe-area-inset-bottom, 0px));
-      z-index: 20;
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .icon-tile {
+      color: var(--c-ink);
     }
+  }
+
+  /* Manchas de cor nos cantos da tela de boas-vindas. */
+  .blob {
+    position: fixed;
+    z-index: 0;
+    border-radius: 46% 54% 60% 40% / 50% 45% 55% 50%;
+    pointer-events: none;
   }
 }

@@ -7,7 +7,7 @@ export const MIN_INTERVAL_MINUTES = 15;
 export const MAX_INTERVAL_MINUTES = 72 * 60;
 export const MAX_DAYS = 60;
 const DAY = 1440;
-/** Hora de dormir dos bebês: das 20h às 6h. */
+/** Hora de dormir das crianças: das 20h às 6h. */
 export const SLEEP_START_MINUTE = 20 * 60;
 export const SLEEP_END_MINUTE = 6 * 60;
 

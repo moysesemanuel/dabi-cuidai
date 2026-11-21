@@ -49,7 +49,7 @@ export function ThemeSetting() {
               }}
               className={
                 "h-10 flex-1 rounded-[0.65rem] text-[15px] font-semibold " +
-                (theme === o.id ? "bg-white text-accent shadow-sm" : "text-ink-soft")
+                (theme === o.id ? "bg-brand text-[#ffffff]" : "text-ink-soft")
               }
             >
               {o.label}

@@ -24,3 +24,17 @@ export async function api<T = unknown>(method: string, path: string, body?: unkn
   if (!res.ok) throw new ApiError(res.status, typeof data?.error === "string" ? data.error : "Algo deu errado.");
   return data as T;
 }
+
+/** Envia um arquivo (bytes crus) para a API, por exemplo a foto já comprimida de uma criança. */
+export async function apiUpload(path: string, file: Blob): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(path, { method: "PUT", headers: { "content-type": file.type }, body: file, cache: "no-store" });
+  } catch {
+    throw new ApiError(0, "Sem conexão. Tente de novo.");
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, typeof data?.error === "string" ? data.error : "Não foi possível enviar a foto.");
+  }
+}

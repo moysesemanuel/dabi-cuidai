@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Avatar } from "@/components/Art";
+import { useEffect, useRef, useState } from "react";
+import { Avatar, CameraIcon } from "@/components/Art";
+import { PhotoCropper } from "@/components/PhotoCropper";
+import { ApiError } from "@/lib/api";
 import { useReadyApp } from "@/components/AppData";
 import { PushSettings } from "@/components/PushSettings";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { ThemeSetting } from "@/components/ThemeSetting";
-import { CHILD_COLORS } from "@/lib/types";
+import { CHILD_COLORS, type Child } from "@/lib/types";
 
 type InstallEvent = Event & { prompt: () => Promise<void> };
 
@@ -25,17 +28,17 @@ export function AjustesScreen() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-[1.9rem] font-medium">Ajustes</h1>
-
+    <div className="flex flex-col">
+      <ScreenHeader title="Ajustes" />
+      <div className="flex flex-col gap-6">
       <section aria-labelledby="bebes" className="flex flex-col gap-2">
-        <h2 id="bebes" className="group-label">Meus bebês</h2>
+        <h2 id="bebes" className="group-label">Minhas crianças</h2>
         {kids.map((k) => (
           <div key={k.id} className="card flex flex-col gap-3 p-4">
             <div className="flex items-center gap-3">
-              <Avatar fill={k.fill} size={40} />
+              <ChildPhoto child={k} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <label htmlFor={`nome-${k.id}`} className="text-sm font-semibold text-ink-soft">Nome do bebê</label>
+                <label htmlFor={`nome-${k.id}`} className="text-sm font-semibold text-ink-soft">Nome da criança</label>
                 <input
                   id={`nome-${k.id}`}
                   className="field"
@@ -80,10 +83,10 @@ export function AjustesScreen() {
         ))}
         <button
           onClick={() => actions.addChild()}
-          className="flex h-16 items-center justify-center gap-3 rounded-[1.125rem] border border-dashed border-ink-soft/40 bg-white text-base font-semibold text-ink-soft"
+          className="flex h-16 items-center justify-center gap-3 rounded-[1.25rem] border-[1.5px] border-dashed border-brand/50 bg-white text-base font-bold text-brand"
         >
-          <span className="flex size-9 items-center justify-center rounded-full bg-track text-xl leading-none">+</span>
-          Adicionar bebê
+          <span className="flex size-9 items-center justify-center rounded-full bg-brand-soft text-xl leading-none">+</span>
+          Adicionar criança
         </button>
       </section>
 
@@ -116,7 +119,7 @@ export function AjustesScreen() {
           </button>
           <p className="text-sm text-ink-soft">
             {state.deviceCount === 1 ? "1 celular conectado." : `${state.deviceCount} celulares conectados.`} Quem tem o
-            código vê os remédios, então compartilhe só com quem cuida dos bebês.
+            código vê os remédios, então compartilhe só com quem cuida das crianças.
           </p>
           <button
             onClick={() => {
@@ -133,7 +136,7 @@ export function AjustesScreen() {
 
       <section aria-labelledby="app" className="flex flex-col gap-2">
         <h2 id="app" className="group-label">Instalar o app</h2>
-        <div className="card p-4" style={{ background: "var(--c-lilac)" }}>
+        <div className="card p-4" style={{ background: "var(--c-brand-soft)" }}>
           <p className="text-base leading-snug">
             Instale para abrir como app, direto da tela inicial, mesmo sem internet.
           </p>
@@ -156,6 +159,92 @@ export function AjustesScreen() {
           orientações do pediatra. Os remédios ficam guardados na sua família, não só neste aparelho.
         </p>
       </section>
+      </div>
+    </div>
+  );
+}
+
+/** Foto da criança: tocar no avatar escolhe uma foto, que passa pelo ajuste de enquadramento antes de ser enviada. */
+function ChildPhoto({ child }: { child: Child }) {
+  const { actions } = useReadyApp();
+  const input = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const pick = () => input.current?.click();
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={pick}
+        aria-label={child.photoUrl ? `Trocar a foto de ${child.name}` : `Adicionar foto de ${child.name}`}
+        className="relative rounded-full"
+      >
+        <Avatar fill={child.fill} photo={child.photoUrl} size={64} />
+        <span className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full border-2 border-white bg-brand text-[#ffffff]">
+          <CameraIcon size={15} />
+        </span>
+      </button>
+      {child.photoUrl ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            if (!window.confirm(`Remover a foto de ${child.name}?`)) return;
+            setBusy(true);
+            setError(null);
+            try {
+              await actions.removeChildPhoto(child.id);
+            } catch (err) {
+              setError(err instanceof ApiError ? err.message : "Não foi possível remover.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="text-xs font-bold text-ink-soft underline"
+        >
+          Remover foto
+        </button>
+      ) : (
+        <button type="button" onClick={pick} className="text-xs font-bold text-brand underline">
+          Adicionar foto
+        </button>
+      )}
+      {error && <p role="alert" className="max-w-24 text-center text-xs font-bold text-danger">{error}</p>}
+
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const chosen = e.target.files?.[0];
+          e.target.value = "";
+          if (chosen) {
+            setError(null);
+            setFile(chosen);
+          }
+        }}
+      />
+
+      {file && (
+        <PhotoCropper
+          file={file}
+          name={child.name}
+          fill={child.fill}
+          onCancel={() => setFile(null)}
+          onConfirm={async (photo) => {
+            try {
+              await actions.setChildPhoto(child.id, photo);
+              setFile(null);
+            } catch (err) {
+              throw new Error(err instanceof ApiError ? err.message : "Não foi possível enviar a foto.");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
