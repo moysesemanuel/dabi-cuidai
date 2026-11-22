@@ -89,3 +89,21 @@ alter table doses alter column child_id set not null;
 alter table doses alter column med_name set not null;
 alter table doses alter column dose_text set not null;
 create index if not exists doses_child_scheduled_idx on doses (child_id, scheduled_at);
+
+-- ---------- V2: perfil da criança ----------
+-- Data de nascimento é data civil (sem horário), para não mudar de dia por causa do fuso.
+alter table children add column if not exists birth_date date;
+-- 'yes', 'no' ou null (não informado).
+alter table children add column if not exists premature text;
+-- Idade gestacional ao nascer, só para prematuros (semanas 22–36, dias 0–6).
+alter table children add column if not exists ga_weeks smallint;
+alter table children add column if not exists ga_days smallint;
+do $$ begin
+  alter table children add constraint children_premature_chk check (premature in ('yes', 'no'));
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter table children add constraint children_ga_chk check (
+    (ga_weeks is null and ga_days is null)
+    or (premature = 'yes' and ga_weeks between 22 and 36 and ga_days between 0 and 6)
+  );
+exception when duplicate_object then null; end $$;

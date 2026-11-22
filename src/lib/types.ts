@@ -12,6 +12,21 @@ export interface Child {
   fill: string;
   /** Endereço da foto (muda a cada troca). Sem foto, o app desenha o rostinho na cor da criança. */
   photoUrl?: string;
+  /** Data civil "AAAA-MM-DD". */
+  birthDate?: string;
+  /** Nasceu prematuro? Sem valor: não informado. */
+  premature?: "yes" | "no";
+  /** Idade gestacional ao nascer, só quando prematuro. */
+  gestationalAge?: { weeks: number; days: number };
+}
+
+/** Campos que a família pode mudar numa criança. `null` apaga o valor. */
+export interface ChildPatch {
+  name?: string;
+  fill?: string;
+  birthDate?: string | null;
+  premature?: "yes" | "no" | null;
+  gestationalAge?: { weeks: number; days: number } | null;
 }
 
 export interface Medication {

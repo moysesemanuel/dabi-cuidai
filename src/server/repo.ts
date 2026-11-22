@@ -8,6 +8,7 @@ import {
   type Medication,
   type NewMedication,
 } from "@/lib/types";
+import { daysBetween, MIN_GA_WEEKS, parseCivilDate, PRETERM_WEEKS_LIMIT, toIso, todayCivil, type CivilDate } from "@/lib/age";
 import { HttpError } from "./http";
 import { sql } from "./sql";
 import type { Session } from "./auth";
@@ -46,7 +47,16 @@ export function parseMedication(body: Record<string, unknown>): NewMedication {
 
 // ---------- leitura ----------
 
-interface ChildRow { id: number; name: string; fill: string; photo_version: number | null }
+interface ChildRow {
+  id: number;
+  name: string;
+  fill: string;
+  photo_version: number | null;
+  birth_date: string | null;
+  premature: "yes" | "no" | null;
+  ga_weeks: number | null;
+  ga_days: number | null;
+}
 interface MedRow { id: number; child_id: number; name: string; dose_text: string; interval_minutes: number; first_dose_at: number; days: number; created_at: number }
 interface DoseRow { id: number; medication_id: number; scheduled_at: number; status: "pending" | "given"; given_at: number | null }
 
@@ -59,7 +69,8 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
     select count(distinct s.device_id)::bigint as "pushCount"
     from push_subscriptions s join devices d on d.id = s.device_id where d.family_id = ${familyId}`;
   const children = await sql<ChildRow[]>`
-    select id, name, fill, photo_version from children where family_id = ${familyId} order by id`;
+    select id, name, fill, photo_version, birth_date::text as birth_date, premature, ga_weeks, ga_days
+    from children where family_id = ${familyId} order by id`;
   const meds = await sql<MedRow[]>`
     select id, child_id, name, dose_text, interval_minutes, first_dose_at, days, created_at
     from medications where family_id = ${familyId} and deleted_at is null order by id`;
@@ -81,6 +92,9 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
         name: c.name,
         fill: c.fill,
         photoUrl: c.photo_version ? `/api/children/${c.id}/photo?v=${c.photo_version}` : undefined,
+        birthDate: c.birth_date ?? undefined,
+        premature: c.premature ?? undefined,
+        gestationalAge: c.ga_weeks !== null && c.ga_days !== null ? { weeks: c.ga_weeks, days: c.ga_days } : undefined,
       }),
     ),
     medications: meds.map(
@@ -125,15 +139,80 @@ export async function addChild(session: Session): Promise<void> {
     values (${session.familyId}, ${`Criança ${kids.length + 1}`}, ${color.fill}, ${Date.now()})`;
 }
 
+type ChildColumns = {
+  name: string;
+  fill: string;
+  birth_date: string | null;
+  premature: "yes" | "no" | null;
+  ga_weeks: number | null;
+  ga_days: number | null;
+};
+
+/**
+ * Junta o que já está salvo com o que chegou e confere as regras do perfil.
+ * Só o que vier no corpo muda; `null` apaga. Deixar de ser prematuro apaga a idade gestacional.
+ */
+export function mergeChildPatch(current: ChildColumns, body: Record<string, unknown>, today: CivilDate): ChildColumns {
+  const next = { ...current };
+  if (body.name !== undefined) next.name = text(body.name, 30, "Nome", true);
+  if (body.fill !== undefined) {
+    const fill = CHILD_COLORS.find((c) => c.fill === body.fill)?.fill;
+    if (!fill) throw new HttpError(400, "Cor inválida.");
+    next.fill = fill;
+  }
+  if (body.birthDate !== undefined) {
+    if (body.birthDate === null) next.birth_date = null;
+    else {
+      const date = typeof body.birthDate === "string" ? parseCivilDate(body.birthDate) : null;
+      if (!date) throw new HttpError(400, "Data de nascimento inválida.");
+      // Um dia de folga: o servidor pode já estar no dia seguinte ao do aparelho.
+      if (daysBetween(today, date) > 1) throw new HttpError(400, "A data de nascimento não pode ser no futuro.");
+      if (daysBetween(date, today) > MAX_CHILD_AGE_DAYS) throw new HttpError(400, "Data de nascimento antiga demais.");
+      next.birth_date = toIso(date);
+    }
+  }
+  if (body.premature !== undefined) {
+    if (body.premature !== null && body.premature !== "yes" && body.premature !== "no") {
+      throw new HttpError(400, "Valor de prematuro inválido.");
+    }
+    next.premature = body.premature;
+  }
+  if (body.gestationalAge !== undefined) {
+    const ga = body.gestationalAge as { weeks?: unknown; days?: unknown } | null;
+    if (ga === null) {
+      next.ga_weeks = null;
+      next.ga_days = null;
+    } else {
+      if (!ga || typeof ga !== "object") throw new HttpError(400, "Idade gestacional inválida.");
+      next.ga_weeks = int(ga.weeks, MIN_GA_WEEKS, PRETERM_WEEKS_LIMIT - 1, "Semanas de gestação");
+      next.ga_days = int(ga.days ?? 0, 0, 6, "Dias de gestação");
+    }
+  }
+  if (next.premature !== "yes") {
+    if (body.gestationalAge !== undefined && body.gestationalAge !== null) {
+      throw new HttpError(400, "Idade gestacional só para quem nasceu prematuro.");
+    }
+    next.ga_weeks = null;
+    next.ga_days = null;
+  }
+  return next;
+}
+
+/** 18 anos: o app é para crianças; mais que isso é quase certamente erro de digitação. */
+const MAX_CHILD_AGE_DAYS = 18 * 366;
+
 export async function updateChild(session: Session, id: number, body: Record<string, unknown>): Promise<void> {
-  const name = body.name === undefined ? undefined : text(body.name, 30, "Nome", true);
-  const fill =
-    body.fill === undefined ? undefined : CHILD_COLORS.find((c) => c.fill === body.fill)?.fill;
-  if (body.fill !== undefined && !fill) throw new HttpError(400, "Cor inválida.");
-  const rows = await sql`
-    update children set name = coalesce(${name ?? null}, name), fill = coalesce(${fill ?? null}, fill)
-    where id = ${id} and family_id = ${session.familyId} returning id`;
-  if (!rows.length) throw new HttpError(404, "Criança não encontrada.");
+  await sql.begin(async (tx) => {
+    const [current] = await tx<ChildColumns[]>`
+      select name, fill, birth_date::text as birth_date, premature, ga_weeks, ga_days
+      from children where id = ${id} and family_id = ${session.familyId} for update`;
+    if (!current) throw new HttpError(404, "Criança não encontrada.");
+    const next = mergeChildPatch(current, body, todayCivil());
+    await tx`
+      update children set name = ${next.name}, fill = ${next.fill}, birth_date = ${next.birth_date}::date,
+        premature = ${next.premature}, ga_weeks = ${next.ga_weeks}, ga_days = ${next.ga_days}
+      where id = ${id}`;
+  });
 }
 
 export async function deleteChild(session: Session, id: number): Promise<void> {

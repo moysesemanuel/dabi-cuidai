@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Avatar, BottleIcon, CheckIcon, ChevronIcon, ClockIcon, Mascot, PlusIcon, UserIcon } from "@/components/Art";
+import { Avatar, BottleIcon, CalendarIcon, CheckIcon, ChevronIcon, ClockIcon, Mascot, PlusIcon, UserIcon } from "@/components/Art";
 import { useReadyApp } from "@/components/AppData";
 import { ChildFilter } from "@/components/ChildFilter";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -68,6 +68,7 @@ export function InicioScreen() {
             <ChevronIcon />
           </Link>
         )}
+        <CompleteProfileInvite kids={state.children} />
         <ChildFilter label="Ver remédios de:" kids={state.children} value={filter} onChange={setFilter} />
 
         {!hasMeds ? (
@@ -134,6 +135,24 @@ export function InicioScreen() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Convite para completar o perfil enquanto faltar a data de nascimento de alguma criança. */
+function CompleteProfileInvite({ kids }: { kids: Child[] }) {
+  const missing = kids.filter((k) => !k.birthDate);
+  if (!missing.length) return null;
+  const names = new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(missing.map((k) => k.name));
+  return (
+    <Link href={`/perfil#crianca-${missing[0].id}`} className="card flex items-center gap-3 p-3.5 text-[15px] font-semibold">
+      <span className="icon-tile">
+        <CalendarIcon size={22} />
+      </span>
+      <span className="flex-1">
+        Adicione a data de nascimento de {names} para ver a idade no Perfil.
+      </span>
+      <ChevronIcon />
+    </Link>
   );
 }
 

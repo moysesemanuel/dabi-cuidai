@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, apiUpload } from "@/lib/api";
 import { startOfDay } from "@/lib/format";
 import { useNow } from "@/hooks/useNow";
-import type { AppState, NewMedication } from "@/lib/types";
+import type { AppState, ChildPatch, NewMedication } from "@/lib/types";
 
 type Status = "loading" | "signed-out" | "ready" | "unavailable";
 
@@ -15,7 +15,7 @@ interface Actions {
   updateMedication(id: number, input: NewMedication): Promise<void>;
   deleteMedication(id: number): Promise<void>;
   addChild(): Promise<void>;
-  updateChild(id: number, patch: { name?: string; fill?: string }): Promise<void>;
+  updateChild(id: number, patch: ChildPatch): Promise<void>;
   deleteChild(id: number): Promise<void>;
   setDeviceName(name: string): Promise<void>;
   setChildPhoto(id: number, photo: Blob): Promise<void>;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Avatar, CameraIcon } from "@/components/Art";
+import { ChildBirthFields } from "@/components/ChildProfile";
 import { PhotoCropper } from "@/components/PhotoCropper";
 import { ApiError } from "@/lib/api";
 import { useReadyApp } from "@/components/AppData";
@@ -13,7 +14,7 @@ import { CHILD_COLORS, type Child } from "@/lib/types";
 type InstallEvent = Event & { prompt: () => Promise<void> };
 
 export function PerfilScreen() {
-  const { state, actions } = useReadyApp();
+  const { state, now, actions } = useReadyApp();
   const kids = state.children;
   const [copied, setCopied] = useState(false);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
@@ -56,7 +57,7 @@ export function PerfilScreen() {
       <section aria-labelledby="bebes" className="flex flex-col gap-2">
         <h2 id="bebes" className="group-label">Minhas crianças</h2>
         {kids.map((k) => (
-          <div key={k.id} className="card flex flex-col gap-3 p-4">
+          <div key={k.id} id={`crianca-${k.id}`} className="card flex scroll-mt-4 flex-col gap-3 p-4">
             <div className="flex items-center gap-3">
               <ChildPhoto child={k} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -91,6 +92,7 @@ export function PerfilScreen() {
                 />
               ))}
             </div>
+            <ChildBirthFields child={k} now={now} />
             {(kids?.length ?? 0) > 1 && (
               <button
                 onClick={() => {

@@ -15,7 +15,7 @@ if (hasDb) {
   delete process.env.DATABASE_URL;
 }
 
-describe.skipIf(!hasDb)("histórico de doses (Postgres local)", () => {
+describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let sql: typeof import("./sql").sql;
   let repo: typeof import("./repo");
   let dispatch: typeof import("./dispatch");
@@ -136,6 +136,25 @@ describe.skipIf(!hasDb)("histórico de doses (Postgres local)", () => {
     await repo.deleteChild(fam, childA);
     const [{ left }] = await sql<{ left: number }[]>`select count(*)::bigint as left from doses where medication_id = ${medId}`;
     expect(left).toBe(0);
+  });
+
+  it("perfil da criança: grava, lê de volta como data civil e não vaza para outra família", async () => {
+    await repo.updateChild(fam, childA, { birthDate: "2025-06-01", premature: "yes", gestationalAge: { weeks: 32, days: 4 } });
+    const state = await repo.getState(fam, Date.now());
+    expect(state.children.find((c) => c.id === childA)).toMatchObject({
+      birthDate: "2025-06-01",
+      premature: "yes",
+      gestationalAge: { weeks: 32, days: 4 },
+    });
+    // Gêmeo: a outra criança continua sem dados.
+    expect(state.children.find((c) => c.id === childB)?.birthDate).toBeUndefined();
+
+    await repo.updateChild(fam, childA, { premature: "no" });
+    const after = (await repo.getState(fam, Date.now())).children.find((c) => c.id === childA)!;
+    expect(after).toMatchObject({ birthDate: "2025-06-01", premature: "no" });
+    expect(after.gestationalAge).toBeUndefined();
+
+    await expect(repo.updateChild(other, childA, { birthDate: "2025-01-01" })).rejects.toMatchObject({ status: 404 });
   });
 
   it("uma família não vê o histórico da outra", async () => {
