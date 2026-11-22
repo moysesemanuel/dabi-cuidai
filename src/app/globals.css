@@ -243,7 +243,7 @@ body {
     color: #ffffff;
   }
 
-  /* Rótulo de grupo nas telas de ajustes e acima dos filtros. */
+  /* Rótulo de grupo nas telas de perfil e acima dos filtros. */
   .group-label {
     padding: 0 0.25rem;
     font-size: 0.8125rem;

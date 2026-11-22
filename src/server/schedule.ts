@@ -17,10 +17,11 @@ export function nextTarget(eventAt: number | null, now: number): number | null {
 async function nextEventAt(now: number): Promise<number | null> {
   const [row] = await sql<{ at: number | null }[]>`
     select min(case when notified_count = 0 then scheduled_at else last_notified_at + ${REPEAT_EVERY_MS} end) as at
-    from doses
-    where status = 'pending'
-      and scheduled_at > ${now - MAX_LATE_MS}
-      and notified_count <= ${MAX_REPEATS}`;
+    from doses d
+    join medications m on m.id = d.medication_id and m.deleted_at is null
+    where d.status = 'pending'
+      and d.scheduled_at > ${now - MAX_LATE_MS}
+      and d.notified_count <= ${MAX_REPEATS}`;
   return row?.at ?? null;
 }
 

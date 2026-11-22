@@ -77,7 +77,7 @@ export function Welcome() {
             <section className="card flex flex-col gap-3 p-4" aria-labelledby="entrar">
               <h2 id="entrar" className="text-lg font-extrabold">Código da família</h2>
               <p className="text-sm text-ink-soft">
-                Abra o app no celular de quem já usa, vá em Ajustes e copie o código.
+                Abra o app no celular de quem já usa, vá em Perfil e copie o código.
               </p>
               <label htmlFor="codigo" className="sr-only">Código da família</label>
               <input

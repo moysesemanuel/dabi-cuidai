@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { syncPush } from "@/lib/push";
-import { GearIcon, HomeIcon, Logo, MedIcon } from "./Art";
+import { UserIcon, HomeIcon, Logo, MedIcon } from "./Art";
 import { AppDataProvider, useApp } from "./AppData";
 import { Welcome } from "./Welcome";
 
 const NAV = [
-  { href: "/", label: "Hoje", Icon: HomeIcon },
+  { href: "/", label: "Início", Icon: HomeIcon },
   { href: "/remedios", label: "Remédios", Icon: MedIcon },
-  { href: "/ajustes", label: "Ajustes", Icon: GearIcon },
+  { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ];
 
 /** Links de navegação. Ficam isolados porque `usePathname` precisa de um <Suspense> em rotas dinâmicas. */

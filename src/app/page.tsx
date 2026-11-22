@@ -1,8 +1,8 @@
-import { HojeScreen } from "@/components/screens/HojeScreen";
+import { InicioScreen } from "@/components/screens/InicioScreen";
 
 // A tela depende da sessão do aparelho (carregada no cliente), então não há o que validar como navegação instantânea.
 export const instant = false;
 
 export default function Page() {
-  return <HojeScreen />;
+  return <InicioScreen />;
 }

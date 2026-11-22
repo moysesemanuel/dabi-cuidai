@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Avatar, BottleIcon, CheckIcon, ClockIcon, Mascot, PlusIcon } from "@/components/Art";
+import { Avatar, BottleIcon, CheckIcon, ChevronIcon, ClockIcon, Mascot, PlusIcon, UserIcon } from "@/components/Art";
 import { useReadyApp } from "@/components/AppData";
 import { ChildFilter } from "@/components/ChildFilter";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import type { Child, DoseEvent, Medication } from "@/lib/types";
-import { fmtLongDate, fmtTime, relativeLabel, startOfDay } from "@/lib/format";
+import { fmtLongDate, fmtTime, greeting, relativeLabel, startOfDay } from "@/lib/format";
 
 interface Row {
   dose: DoseEvent;
@@ -21,7 +21,7 @@ function dayTime(ms: number, dayStart: number): string {
   return `${day} às ${fmtTime(ms)}`;
 }
 
-export function HojeScreen() {
+export function InicioScreen() {
   const { state, now, actions } = useReadyApp();
   const [filter, setFilter] = useState<number | null>(null);
   const dayStart = startOfDay(now);
@@ -50,7 +50,7 @@ export function HojeScreen() {
   return (
     <div className="flex flex-col">
       <ScreenHeader
-        title="Hoje"
+        title={greeting(now, state.deviceName)}
         action={
           <Link href="/novo" aria-label="Novo remédio" className="appbar-btn">
             <PlusIcon size={26} />
@@ -59,6 +59,15 @@ export function HojeScreen() {
       />
 
       <div className="flex flex-col gap-6">
+        {!state.deviceName && (
+          <Link href="/perfil#voce" className="card flex items-center gap-3 p-3.5 text-[15px] font-semibold">
+            <span className="icon-tile">
+              <UserIcon size={22} />
+            </span>
+            <span className="flex-1">Como podemos te chamar? Coloque seu nome no Perfil.</span>
+            <ChevronIcon />
+          </Link>
+        )}
         <ChildFilter label="Ver remédios de:" kids={state.children} value={filter} onChange={setFilter} />
 
         {!hasMeds ? (
@@ -118,7 +127,9 @@ export function HojeScreen() {
               )}
             </div>
 
-            <p className="text-center text-sm font-semibold capitalize text-ink-soft">{fmtLongDate(now)}</p>
+            <p className="text-center text-sm font-semibold text-ink-soft">
+              {fmtLongDate(now).replace(/^./, (c) => c.toUpperCase())}
+            </p>
           </>
         )}
       </div>

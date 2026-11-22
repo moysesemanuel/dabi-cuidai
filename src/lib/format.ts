@@ -7,6 +7,14 @@ export const fmtDate = (ms: number): string =>
 export const fmtLongDate = (ms: number): string =>
   new Date(ms).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
+/** Saudação pela hora do aparelho: bom dia das 5h ao meio-dia, boa tarde até as 18h, boa noite depois. */
+export function greeting(ms: number, name?: string): string {
+  const hour = new Date(ms).getHours();
+  const base = hour >= 5 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `${base}, ${first}!` : `${base}!`;
+}
+
 export function startOfDay(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);

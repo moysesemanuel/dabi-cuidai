@@ -52,6 +52,7 @@ export async function dispatchDue(now = Date.now()): Promise<DispatchSummary> {
   >`
     with due as (
       select d.id from doses d
+      join medications m on m.id = d.medication_id and m.deleted_at is null
       where d.status = 'pending'
         and d.scheduled_at <= ${now}
         and d.scheduled_at > ${now - MAX_LATE_MS}
@@ -59,18 +60,17 @@ export async function dispatchDue(now = Date.now()): Promise<DispatchSummary> {
           d.notified_count = 0
           or (d.notified_count <= ${MAX_REPEATS} and d.last_notified_at <= ${now - REPEAT_EVERY_MS})
         )
-      for update skip locked
+      for update of d skip locked
     ),
     claimed as (
       update doses set notified_count = notified_count + 1, last_notified_at = ${now}
       where id in (select id from due)
-      returning id, family_id, medication_id, scheduled_at, notified_count - 1 as notified_count
+      returning id, family_id, child_id, med_name, dose_text, scheduled_at, notified_count - 1 as notified_count
     )
     select c.id, c.family_id, c.scheduled_at, c.notified_count,
-           ch.name as child_name, m.name as med_name, m.dose_text
+           ch.name as child_name, c.med_name, c.dose_text
     from claimed c
-    join medications m on m.id = c.medication_id
-    join children ch on ch.id = m.child_id
+    join children ch on ch.id = c.child_id
     order by c.scheduled_at`;
 
   const summary: DispatchSummary = { due: claimed.length, sent: 0, failed: 0, removed: 0 };

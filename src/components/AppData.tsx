@@ -17,6 +17,7 @@ interface Actions {
   addChild(): Promise<void>;
   updateChild(id: number, patch: { name?: string; fill?: string }): Promise<void>;
   deleteChild(id: number): Promise<void>;
+  setDeviceName(name: string): Promise<void>;
   setChildPhoto(id: number, photo: Blob): Promise<void>;
   removeChildPhoto(id: number): Promise<void>;
   createFamily(): Promise<void>;
@@ -115,6 +116,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       addChild: () => run(() => api("POST", "/api/children")),
       updateChild: (id, patch) => run(() => api("PATCH", `/api/children/${id}`, patch)),
       deleteChild: (id) => run(() => api("DELETE", `/api/children/${id}`)),
+      setDeviceName: (name) => run(() => api("PATCH", "/api/device", { name })),
       setChildPhoto: (id, photo) => run(() => apiUpload(`/api/children/${id}/photo`, photo)),
       removeChildPhoto: (id) => run(() => api("DELETE", `/api/children/${id}/photo`)),
       createFamily: () => run(() => api("POST", "/api/family")),

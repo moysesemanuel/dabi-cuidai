@@ -1,8 +1,6 @@
-import { AjustesScreen } from "@/components/screens/AjustesScreen";
+import { redirect } from "next/navigation";
 
-// A tela depende da sessão do aparelho (carregada no cliente), então não há o que validar como navegação instantânea.
-export const instant = false;
-
+// "Ajustes" virou "Perfil". Mantém o endereço antigo para atalhos e avisos que ainda apontam para ele.
 export default function Page() {
-  return <AjustesScreen />;
+  redirect("/perfil");
 }

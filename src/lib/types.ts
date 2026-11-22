@@ -36,6 +36,21 @@ export interface DoseEvent {
   givenAt?: number;
 }
 
+/** Uma dose no histórico, com o remédio como era quando a dose foi agendada. */
+export interface DoseHistoryItem {
+  id: number;
+  childId: number;
+  medicationId: number;
+  medName: string;
+  doseText: string;
+  scheduledAt: number;
+  status: DoseStatus;
+  /** Quando alguém tocou em "Já dei". Sem isso e com status "given", a dose veio da versão antiga. */
+  givenAt?: number;
+  /** O remédio foi removido da lista depois; a dose continua no histórico. */
+  medicationRemoved: boolean;
+}
+
 export interface NewMedication {
   childId: number;
   name: string;
@@ -49,6 +64,8 @@ export interface NewMedication {
 export interface AppState {
   familyCode: string;
   deviceId: string;
+  /** Nome de quem usa este aparelho ("Ana"), para a saudação. Cada responsável põe o seu. */
+  deviceName?: string;
   deviceCount: number;
   /** Quantos celulares da família têm os avisos ligados. */
   pushDeviceCount: number;

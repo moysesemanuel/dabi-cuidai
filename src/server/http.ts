@@ -19,7 +19,9 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
     return await fn();
   } catch (err) {
     if (err instanceof HttpError) return json({ error: err.message }, { status: err.status });
-    console.error(err);
+    // Só o tipo e o código do erro: um erro do banco traz a consulta e os valores, que podem ser dados de saúde.
+    const code = (err as { code?: unknown })?.code;
+    console.error("erro interno", err instanceof Error ? err.name : typeof err, typeof code === "string" ? code : "");
     return json({ error: "Erro interno." }, { status: 500 });
   }
 }

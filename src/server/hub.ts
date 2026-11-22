@@ -73,9 +73,10 @@ async function checkScheduler(): Promise<string | undefined> {
 /** Doses que já deviam ter sido avisadas e não foram: o sintoma direto de agendamento parado. */
 async function checkDispatch(now: number): Promise<string | undefined> {
   const [row] = await sql<{ late: number }[]>`
-    select count(*)::bigint as late from doses
-    where status = 'pending' and notified_count = 0
-      and scheduled_at <= ${now - DISPATCH_GRACE_MS} and scheduled_at > ${now - MAX_LATE_MS}`;
+    select count(*)::bigint as late from doses d
+    join medications m on m.id = d.medication_id and m.deleted_at is null
+    where d.status = 'pending' and d.notified_count = 0
+      and d.scheduled_at <= ${now - DISPATCH_GRACE_MS} and d.scheduled_at > ${now - MAX_LATE_MS}`;
   if (row.late > 0) throw new Error(`${row.late} dose(s) vencida(s) há mais de 10 min sem aviso`);
   return undefined;
 }
@@ -137,7 +138,7 @@ export async function getHubOverview(): Promise<HubOverview> {
       (select count(*) from children)::bigint as children,
       (select count(*) from children where photo_version is not null)::bigint as photos,
       (select count(*) from medications
-        where first_dose_at <= ${now} and first_dose_at + days * ${DAY}::bigint > ${now})::bigint as active_meds,
+        where deleted_at is null and first_dose_at <= ${now} and first_dose_at + days * ${DAY}::bigint > ${now})::bigint as active_meds,
       (select count(*) from doses where scheduled_at > ${now - DAY} and scheduled_at <= ${now})::bigint as doses_24h,
       (select count(*) from doses
         where scheduled_at > ${now - DAY} and scheduled_at <= ${now} and status = 'given')::bigint as given_24h,

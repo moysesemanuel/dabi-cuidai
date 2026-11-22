@@ -12,7 +12,7 @@ import { CHILD_COLORS, type Child } from "@/lib/types";
 
 type InstallEvent = Event & { prompt: () => Promise<void> };
 
-export function AjustesScreen() {
+export function PerfilScreen() {
   const { state, actions } = useReadyApp();
   const kids = state.children;
   const [copied, setCopied] = useState(false);
@@ -29,8 +29,30 @@ export function AjustesScreen() {
 
   return (
     <div className="flex flex-col">
-      <ScreenHeader title="Ajustes" />
+      <ScreenHeader title="Perfil" />
       <div className="flex flex-col gap-6">
+      <section aria-labelledby="voce-titulo" id="voce" className="flex scroll-mt-4 flex-col gap-2">
+        <h2 id="voce-titulo" className="group-label">Você</h2>
+        <div className="card flex flex-col gap-1 p-4">
+          <label htmlFor="meu-nome" className="text-sm font-semibold text-ink-soft">Seu nome</label>
+          <input
+            id="meu-nome"
+            className="field"
+            defaultValue={state.deviceName ?? ""}
+            placeholder="Ex.: Ana"
+            maxLength={30}
+            autoComplete="given-name"
+            onBlur={(e) => {
+              const name = e.target.value.trim();
+              if (name !== (state.deviceName ?? "")) {
+                actions.setDeviceName(name).catch(() => (e.target.value = state.deviceName ?? ""));
+              }
+            }}
+          />
+          <p className="text-sm text-ink-soft">Aparece na saudação do Início. Cada celular da família tem o seu.</p>
+        </div>
+      </section>
+
       <section aria-labelledby="bebes" className="flex flex-col gap-2">
         <h2 id="bebes" className="group-label">Minhas crianças</h2>
         {kids.map((k) => (
@@ -72,7 +94,7 @@ export function AjustesScreen() {
             {(kids?.length ?? 0) > 1 && (
               <button
                 onClick={() => {
-                  if (window.confirm(`Remover ${k.name} e todos os remédios dele(a)?`)) actions.deleteChild(k.id);
+                  if (window.confirm(`Remover ${k.name}? Os remédios e o histórico de doses dele(a) serão apagados de vez.`)) actions.deleteChild(k.id);
                 }}
                 className="self-start text-sm font-semibold text-ink-soft underline"
               >
@@ -138,7 +160,7 @@ export function AjustesScreen() {
         <h2 id="app" className="group-label">Instalar o app</h2>
         <div className="card p-4" style={{ background: "var(--c-brand-soft)" }}>
           <p className="text-base leading-snug">
-            Instale para abrir como app, direto da tela inicial, mesmo sem internet.
+            Instale para abrir como app, direto da tela inicial.
           </p>
           {installEvent ? (
             <button onClick={() => installEvent.prompt()} className="btn btn-primary mt-3 h-12 px-5 text-base">

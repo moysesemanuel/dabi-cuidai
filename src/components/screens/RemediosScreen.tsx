@@ -37,7 +37,7 @@ export function RemediosScreen() {
   );
 
   async function onRemove(id: number, name: string) {
-    if (window.confirm(`Remover ${name} e todas as doses agendadas?`)) {
+    if (window.confirm(`Remover ${name} da lista? As próximas doses são canceladas; as que já passaram ficam no histórico.`)) {
       await actions.deleteMedication(id);
     }
   }

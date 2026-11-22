@@ -74,3 +74,18 @@ create table if not exists rate_limits (
 alter table children add column if not exists photo bytea;
 alter table children add column if not exists photo_type text;
 alter table children add column if not exists photo_version bigint;
+
+-- ---------- V2: histórico de doses preservado ----------
+-- Remover um remédio só o marca como removido: as doses ficam no histórico.
+alter table medications add column if not exists deleted_at bigint;
+-- Cada dose guarda o remédio, a dose e a criança de quando foi agendada. Editar o remédio depois
+-- não reescreve o passado. (Remover a CRIANÇA ainda apaga tudo dela: é como a família exclui dados.)
+alter table doses add column if not exists child_id bigint references children (id) on delete cascade;
+alter table doses add column if not exists med_name text;
+alter table doses add column if not exists dose_text text;
+update doses d set child_id = m.child_id, med_name = m.name, dose_text = m.dose_text
+from medications m where m.id = d.medication_id and d.med_name is null;
+alter table doses alter column child_id set not null;
+alter table doses alter column med_name set not null;
+alter table doses alter column dose_text set not null;
+create index if not exists doses_child_scheduled_idx on doses (child_id, scheduled_at);

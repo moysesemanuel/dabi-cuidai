@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       title: "Aviso de teste",
       body: "Está tudo certo: este celular vai receber os lembretes.",
       tag: "teste",
-      url: "/ajustes",
+      url: "/perfil",
     });
     if (result.sent === 0) throw new HttpError(409, "Não consegui enviar. Ative os avisos neste celular primeiro.");
     return json({ ok: true });
