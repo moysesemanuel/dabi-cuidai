@@ -96,7 +96,7 @@ export function PerfilScreen() {
             {(kids?.length ?? 0) > 1 && (
               <button
                 onClick={() => {
-                  if (window.confirm(`Remover ${k.name}? Os remédios e o histórico de doses dele(a) serão apagados de vez.`)) actions.deleteChild(k.id);
+                  if (window.confirm(`Remover ${k.name}? Os remédios, o histórico de doses e o diário dele(a) serão apagados de vez.`)) actions.deleteChild(k.id);
                 }}
                 className="self-start text-sm font-semibold text-ink-soft underline"
               >

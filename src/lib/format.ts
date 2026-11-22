@@ -36,3 +36,29 @@ export function relativeLabel(scheduledAt: number, now: number): { text: string;
   if (diffMin <= 60) return { text: diffMin < 1 ? "agora" : `em ${fmtDuration(diffMin)}`, late: false };
   return { text: `às ${fmtTime(scheduledAt)}`, late: false };
 }
+
+/** "Hoje", "Ontem" ou "sexta, 14 de novembro" (com o ano quando não é o atual). */
+export function fmtDayLabel(ms: number, now: number): string {
+  const day = startOfDay(ms);
+  const today = startOfDay(now);
+  if (day === today) return "Hoje";
+  if (day === startOfDay(today - 12 * 3_600_000)) return "Ontem";
+  const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
+  return new Date(ms).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
+/** "38,0 °C". */
+export const fmtTemperature = (celsius: number): string =>
+  `${celsius.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`;
+
+/** Lê o que foi digitado no campo de temperatura ("37,8", "37.8", "38"). Vazio ou inválido: null. */
+export function parseTemperatureInput(value: string): number | null {
+  const clean = value.trim().replace(",", ".").replace(/\s*°?\s*c?$/i, "");
+  if (!/^\d{2}(\.\d+)?$/.test(clean)) return null;
+  return Math.round(Number(clean) * 10) / 10;
+}

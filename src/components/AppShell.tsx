@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { syncPush } from "@/lib/push";
-import { UserIcon, HomeIcon, Logo, MedIcon } from "./Art";
+import { DiaryIcon, HomeIcon, Logo, MedIcon, UserIcon } from "./Art";
 import { AppDataProvider, useApp } from "./AppData";
 import { Welcome } from "./Welcome";
 
 const NAV = [
   { href: "/", label: "Início", Icon: HomeIcon },
   { href: "/remedios", label: "Remédios", Icon: MedIcon },
+  { href: "/diario", label: "Diário", Icon: DiaryIcon },
   { href: "/perfil", label: "Perfil", Icon: UserIcon },
 ];
 

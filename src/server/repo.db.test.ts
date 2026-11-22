@@ -19,6 +19,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let sql: typeof import("./sql").sql;
   let repo: typeof import("./repo");
   let dispatch: typeof import("./dispatch");
+  let diary: typeof import("./diary");
   let fam: Session;
   let other: Session;
   let childA: number;
@@ -28,6 +29,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     ({ sql } = await import("./sql"));
     repo = await import("./repo");
     dispatch = await import("./dispatch");
+    diary = await import("./diary");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -155,6 +157,99 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     expect(after.gestationalAge).toBeUndefined();
 
     await expect(repo.updateChild(other, childA, { birthDate: "2025-01-01" })).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("diário: cria, lista por criança e período, edita e exclui", async () => {
+    const now = Date.now();
+    const fever = await diary.createHealthEntry(fam, {
+      childId: childA,
+      occurredAt: now - 2 * HOUR,
+      temperature: 38,
+      symptoms: [],
+      note: "estava mais quietinha",
+    });
+    await diary.createHealthEntry(fam, { childId: childB, occurredAt: now - 26 * HOUR, temperature: null, symptoms: ["Tosse"], note: "" });
+    // Sem sintomas: o array vazio precisa ir e voltar como array.
+    const all = await diary.listHealthEntries(fam, { from: now - 2 * 24 * HOUR, to: now + HOUR });
+    expect(all.map((e) => e.childId)).toEqual([childA, childB]);
+    expect(all[0]).toMatchObject({ temperature: 38, symptoms: [], note: "estava mais quietinha" });
+    expect(all[1]).toMatchObject({ symptoms: ["Tosse"] });
+    expect(all[1].temperature).toBeUndefined();
+
+    expect(await diary.listHealthEntries(fam, { childId: childB, from: now - 2 * 24 * HOUR, to: now })).toHaveLength(1);
+    expect(await diary.listHealthEntries(fam, { from: now - 24 * HOUR, to: now })).toHaveLength(1);
+
+    await diary.updateHealthEntry(fam, fever, {
+      childId: childA,
+      occurredAt: now - 2 * HOUR,
+      temperature: 37.6,
+      symptoms: ["Sem apetite"],
+      note: "",
+    });
+    expect(await diary.getHealthEntry(fam, fever)).toMatchObject({ temperature: 37.6, symptoms: ["Sem apetite"], note: "" });
+
+    await diary.deleteHealthEntry(fam, fever);
+    await expect(diary.getHealthEntry(fam, fever)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("diário: outra família não lê, não edita, não exclui e não registra para criança alheia", async () => {
+    const now = Date.now();
+    const id = await diary.createHealthEntry(fam, { childId: childA, occurredAt: now, temperature: 38.2, symptoms: [], note: "" });
+    const input = { childId: childA, occurredAt: now, temperature: 36, symptoms: [], note: "" };
+    expect(await diary.listHealthEntries(other, { from: now - HOUR, to: now + HOUR })).toEqual([]);
+    await expect(diary.listHealthEntries(other, { childId: childA, from: now - HOUR, to: now + HOUR })).rejects.toMatchObject({ status: 404 });
+    await expect(diary.getHealthEntry(other, id)).rejects.toMatchObject({ status: 404 });
+    await expect(diary.updateHealthEntry(other, id, input)).rejects.toMatchObject({ status: 404 });
+    await expect(diary.deleteHealthEntry(other, id)).rejects.toMatchObject({ status: 404 });
+    await expect(diary.createHealthEntry(other, input)).rejects.toMatchObject({ status: 404 });
+    expect((await diary.getHealthEntry(fam, id)).temperature).toBe(38.2);
+  });
+
+  it("diário: remover a criança apaga os registros dela; importar não roda sobre um diário", async () => {
+    const now = Date.now();
+    await diary.createHealthEntry(fam, { childId: childA, occurredAt: now, temperature: null, symptoms: [], note: "a" });
+    await diary.createHealthEntry(fam, { childId: childB, occurredAt: now, temperature: null, symptoms: [], note: "b" });
+    await repo.deleteChild(fam, childA);
+    const left = await diary.listHealthEntries(fam, { from: now - HOUR, to: now + HOUR });
+    expect(left.map((e) => e.note)).toEqual(["b"]);
+
+    const data = { children: [{ id: 1, name: "X", fill: "#FFAFA3" }], medications: [], doses: [] };
+    await expect(repo.importLocal(fam, data)).rejects.toMatchObject({ status: 409 });
+    expect(await diary.listHealthEntries(fam, { from: now - HOUR, to: now + HOUR })).toHaveLength(1);
+  });
+
+  it("índice do diário por mês: conta registros e doses vencidas no fuso do aparelho", async () => {
+    const tz = "America/Sao_Paulo";
+    // 01/11/2026 às 01:00 em São Paulo (UTC-3) = 04:00 UTC; 31/10 às 23:00 em São Paulo = 01/11 02:00 UTC.
+    const nov1 = Date.UTC(2026, 10, 1, 4);
+    const oct31Night = Date.UTC(2026, 10, 1, 2);
+    const now = Date.UTC(2026, 10, 21, 12);
+    const entry = (occurredAt: number, childId = childA) =>
+      sql`insert into health_entries (family_id, child_id, occurred_at, note, created_at, updated_at)
+          values (${fam.familyId}, ${childId}, ${occurredAt}, 'x', ${now}, ${now})`;
+    await entry(nov1);
+    await entry(oct31Night);
+    await entry(oct31Night, childB);
+    const medId = await repo.createMedication(fam, {
+      childId: childA, name: "X", doseText: "", intervalMinutes: 12 * 60, firstDoseAt: Date.now() - 30 * HOUR, days: 1,
+    });
+    expect(medId).toBeGreaterThan(0);
+
+    const months = await diary.diaryMonths(fam, undefined, tz, now);
+    expect(months.find((m) => m.month === "2026-10")).toMatchObject({ entries: 2 });
+    expect(months.find((m) => m.month === "2026-11")).toMatchObject({ entries: 1 });
+    expect((await diary.diaryMonths(fam, childB, tz, now)).find((m) => m.month === "2026-10")).toMatchObject({ entries: 1 });
+
+    // As doses vencidas do remédio aparecem no mês atual (real), e nenhuma dose futura conta.
+    const real = await diary.diaryMonths(fam, childA, tz);
+    const doses = real.reduce((sum, m) => sum + m.doses, 0);
+    const [{ due }] = await sql<{ due: number }[]>`
+      select count(*)::bigint as due from doses where medication_id = ${medId} and scheduled_at <= ${Date.now()}`;
+    expect(doses).toBe(due);
+
+    await expect(diary.diaryMonths(other, childA, tz)).rejects.toMatchObject({ status: 404 });
+    expect(() => diary.parseTimeZone("Marte/Base")).toThrow("Fuso");
+    expect(diary.parseTimeZone(tz)).toBe(tz);
   });
 
   it("uma família não vê o histórico da outra", async () => {

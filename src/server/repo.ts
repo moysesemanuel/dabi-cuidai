@@ -454,6 +454,10 @@ export async function importLocal(session: Session, data: ImportBody): Promise<v
     const [{ count }] = await tx<{ count: number }[]>`
       select count(*)::bigint as count from medications where family_id = ${session.familyId}`;
     if (count > 0) throw new HttpError(409, "Esta família já tem remédios; importação cancelada.");
+    // A importação troca as crianças da família: nunca quando já há diário, que seria apagado junto.
+    const [{ entries }] = await tx<{ entries: number }[]>`
+      select count(*)::bigint as entries from health_entries where family_id = ${session.familyId}`;
+    if (entries > 0) throw new HttpError(409, "Esta família já tem registros no diário; importação cancelada.");
     if (!data.children.length) throw new HttpError(400, "Nada para importar.");
 
     await tx`delete from children where family_id = ${session.familyId}`;

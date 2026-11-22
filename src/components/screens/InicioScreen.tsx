@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Avatar, BottleIcon, CalendarIcon, CheckIcon, ChevronIcon, ClockIcon, Mascot, PlusIcon, UserIcon } from "@/components/Art";
+import { Avatar, BottleIcon, CalendarIcon, CheckIcon, ChevronIcon, ClockIcon, Mascot, PlusIcon, ThermometerIcon, UserIcon } from "@/components/Art";
 import { useReadyApp } from "@/components/AppData";
 import { ChildFilter } from "@/components/ChildFilter";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -69,6 +69,16 @@ export function InicioScreen() {
           </Link>
         )}
         <CompleteProfileInvite kids={state.children} />
+        <Link href="/diario/novo" className="card flex items-center gap-3 p-3.5">
+          <span className="icon-tile">
+            <ThermometerIcon size={22} />
+          </span>
+          <span className="flex-1">
+            <span className="block text-base font-extrabold">Registrar no diário</span>
+            <span className="block text-sm text-ink-soft">Temperatura, sintomas ou uma anotação</span>
+          </span>
+          <ChevronIcon />
+        </Link>
         <ChildFilter label="Ver remédios de:" kids={state.children} value={filter} onChange={setFilter} />
 
         {!hasMeds ? (

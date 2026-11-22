@@ -107,3 +107,21 @@ do $$ begin
     or (premature = 'yes' and ga_weeks between 22 and 36 and ga_days between 0 and 6)
   );
 exception when duplicate_object then null; end $$;
+
+-- ---------- V2: diário de saúde ----------
+-- O que os responsáveis observaram e registraram. O app guarda e mostra; não interpreta.
+create table if not exists health_entries (
+  id bigserial primary key,
+  family_id uuid not null references families (id) on delete cascade,
+  child_id bigint not null references children (id) on delete cascade,
+  occurred_at bigint not null,
+  -- Temperatura em décimos de grau (380 = 38,0 °C): inteiro evita arredondamento de número decimal.
+  temp_tenths smallint check (temp_tenths between 340 and 430),
+  symptoms text[] not null default '{}',
+  note text not null default '',
+  created_by uuid references devices (id) on delete set null,
+  created_at bigint not null,
+  updated_at bigint not null
+);
+create index if not exists health_entries_child_idx on health_entries (child_id, occurred_at desc);
+create index if not exists health_entries_family_idx on health_entries (family_id, occurred_at desc);

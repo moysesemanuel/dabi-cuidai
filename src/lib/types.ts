@@ -75,6 +75,44 @@ export interface NewMedication {
   days: number;
 }
 
+/** Um registro do diário de saúde: o que a família observou, sem interpretação do app. */
+export interface HealthEntry {
+  id: number;
+  childId: number;
+  /** Quando aconteceu (pode ser diferente de quando foi registrado). */
+  occurredAt: number;
+  /** Temperatura medida, em °C com uma casa decimal. */
+  temperature?: number;
+  symptoms: string[];
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface HealthEntryInput {
+  childId: number;
+  occurredAt: number;
+  temperature: number | null;
+  symptoms: string[];
+  note: string;
+}
+
+/** Sintomas oferecidos como atalho. A família pode escrever outros. */
+export const COMMON_SYMPTOMS = [
+  "Tosse",
+  "Coriza",
+  "Nariz entupido",
+  "Vômito",
+  "Diarreia",
+  "Dor de barriga",
+  "Dor de ouvido",
+  "Dor de garganta",
+  "Manchas na pele",
+  "Sem apetite",
+  "Mais sonolento",
+  "Mais irritado",
+] as const;
+
 /** Tudo que as telas precisam, vindo do servidor. */
 export interface AppState {
   familyCode: string;
