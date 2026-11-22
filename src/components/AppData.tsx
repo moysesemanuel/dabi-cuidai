@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, ApiError, apiUpload } from "@/lib/api";
 import { startOfDay } from "@/lib/format";
 import { useNow } from "@/hooks/useNow";
+import { CURRENT_CONSENT } from "@/lib/legal";
 import type { AppState, ChildPatch, NewMedication } from "@/lib/types";
 
 type Status = "loading" | "signed-out" | "ready" | "unavailable";
@@ -23,6 +24,12 @@ interface Actions {
   createFamily(): Promise<void>;
   joinFamily(code: string): Promise<void>;
   leaveFamily(): Promise<void>;
+  /** Troca o código de entrada; os celulares conectados continuam. */
+  rotateCode(): Promise<void>;
+  /** Exclui a família inteira. `confirm` é a palavra digitada pela pessoa. */
+  deleteFamily(confirm: string): Promise<void>;
+  /** Aceite dos termos e da política neste aparelho (versões atuais). */
+  acceptConsent(): Promise<void>;
   importLocal(data: unknown): Promise<void>;
 }
 
@@ -119,10 +126,18 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setDeviceName: (name) => run(() => api("PATCH", "/api/device", { name })),
       setChildPhoto: (id, photo) => run(() => apiUpload(`/api/children/${id}/photo`, photo)),
       removeChildPhoto: (id) => run(() => api("DELETE", `/api/children/${id}/photo`)),
-      createFamily: () => run(() => api("POST", "/api/family")),
-      joinFamily: (code) => run(() => api("POST", "/api/family/join", { code })),
+      // Só chegam aqui depois de a pessoa marcar o aceite na tela de entrada.
+      createFamily: () => run(() => api("POST", "/api/family", { consent: CURRENT_CONSENT })),
+      joinFamily: (code) => run(() => api("POST", "/api/family/join", { code, consent: CURRENT_CONSENT })),
+      acceptConsent: () => run(() => api("POST", "/api/consent", { consent: CURRENT_CONSENT })),
       leaveFamily: async () => {
         await api("POST", "/api/family/leave");
+        setState(undefined);
+        setStatus("signed-out");
+      },
+      rotateCode: () => run(() => api("POST", "/api/family/code")),
+      deleteFamily: async (confirm) => {
+        await api("DELETE", "/api/family", { confirm });
         setState(undefined);
         setStatus("signed-out");
       },

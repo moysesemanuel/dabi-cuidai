@@ -6,6 +6,7 @@ import { Suspense, useEffect } from "react";
 import { syncPush } from "@/lib/push";
 import { DiaryIcon, HomeIcon, Logo, MedIcon, UserIcon } from "./Art";
 import { AppDataProvider, useApp } from "./AppData";
+import { ConsentGate } from "./Consent";
 import { Welcome } from "./Welcome";
 
 const NAV = [
@@ -63,12 +64,13 @@ function NavLinks({ variant }: { variant: "side" | "bottom" }) {
 
 /** Moldura do app. Antes de haver sessão, mostra só o carregamento ou a tela de entrada. */
 function Frame({ children }: { children: React.ReactNode }) {
-  const { status, retry } = useApp();
+  const { status, state, retry } = useApp();
   useEffect(() => {
     if (status === "ready") syncPush().catch(() => {});
   }, [status]);
   if (status === "loading") return null;
   if (status === "signed-out") return <Welcome />;
+  if (status === "ready" && state?.consentRequired) return <ConsentGate />;
   if (status === "unavailable") {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-5">

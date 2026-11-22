@@ -165,3 +165,14 @@ create table if not exists milestones (
   updated_at bigint not null
 );
 create index if not exists milestones_child_idx on milestones (child_id, happened_on desc);
+
+-- ---------- V2: acesso da família ----------
+-- Tipo de aparelho ("iPhone · Safari") para a família reconhecer cada celular na lista de conectados.
+alter table devices add column if not exists device_info text;
+-- Quando o código da família foi trocado pela última vez.
+alter table families add column if not exists code_changed_at bigint;
+-- Aceite dos termos e da política, por aparelho (cada responsável aceita no próprio celular):
+-- as versões aceitas e quando. Um aparelho com versões antigas precisa aceitar de novo para continuar.
+alter table devices add column if not exists terms_version text;
+alter table devices add column if not exists privacy_version text;
+alter table devices add column if not exists consent_at bigint;

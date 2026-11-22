@@ -121,6 +121,8 @@ export interface AppState {
   deviceId: string;
   /** Nome de quem usa este aparelho ("Ana"), para a saudação. Cada responsável põe o seu. */
   deviceName?: string;
+  /** Este aparelho ainda não aceitou as versões atuais dos termos e da política. */
+  consentRequired: boolean;
   deviceCount: number;
   /** Quantos celulares da família têm os avisos ligados. */
   pushDeviceCount: number;

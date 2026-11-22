@@ -9,6 +9,7 @@ import {
   type NewMedication,
 } from "@/lib/types";
 import { daysBetween, MIN_GA_WEEKS, parseCivilDate, PRETERM_WEEKS_LIMIT, toIso, todayCivil, type CivilDate } from "@/lib/age";
+import { consentIsCurrent } from "@/lib/legal";
 import { HttpError } from "./http";
 import { sql } from "./sql";
 import type { Session } from "./auth";
@@ -64,7 +65,8 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
   const familyId = session.familyId;
   const [family] = await sql<{ code: string }[]>`select code from families where id = ${familyId}`;
   const [{ count }] = await sql<{ count: number }[]>`select count(*)::bigint as count from devices where family_id = ${familyId}`;
-  const [device] = await sql<{ label: string | null }[]>`select label from devices where id = ${session.deviceId}`;
+  const [device] = await sql<{ label: string | null; terms_version: string | null; privacy_version: string | null }[]>`
+    select label, terms_version, privacy_version from devices where id = ${session.deviceId}`;
   const [{ pushCount }] = await sql<{ pushCount: number }[]>`
     select count(distinct s.device_id)::bigint as "pushCount"
     from push_subscriptions s join devices d on d.id = s.device_id where d.family_id = ${familyId}`;
@@ -84,6 +86,7 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
     familyCode: family.code,
     deviceId: session.deviceId,
     deviceName: device?.label || undefined,
+    consentRequired: !consentIsCurrent({ terms: device?.terms_version ?? undefined, privacy: device?.privacy_version ?? undefined }),
     deviceCount: count,
     pushDeviceCount: pushCount,
     children: children.map(

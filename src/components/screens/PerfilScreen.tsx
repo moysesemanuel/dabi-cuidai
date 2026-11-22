@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Avatar, CameraIcon } from "@/components/Art";
 import { ChildBirthFields } from "@/components/ChildProfile";
+import { FamilyAccess, FamilyData } from "@/components/FamilyAccess";
 import { PhotoCropper } from "@/components/PhotoCropper";
 import { ApiError } from "@/lib/api";
 import { useReadyApp } from "@/components/AppData";
@@ -16,7 +17,6 @@ type InstallEvent = Event & { prompt: () => Promise<void> };
 export function PerfilScreen() {
   const { state, now, actions } = useReadyApp();
   const kids = state.children;
-  const [copied, setCopied] = useState(false);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
 
   useEffect(() => {
@@ -118,45 +118,9 @@ export function PerfilScreen() {
 
       <ThemeSetting />
 
-      <section aria-labelledby="familia" className="flex flex-col gap-2">
-        <h2 id="familia" className="group-label">Minha família</h2>
-        <div className="card flex flex-col gap-3 p-4">
-          <p className="text-[15px] leading-snug text-ink-soft">
-            Para ver e receber os mesmos remédios em outro celular, abra o app lá e digite este código.
-          </p>
-          <p className="text-center text-[1.7rem] font-semibold tracking-widest tabular-nums" aria-label="Código da família">
-            {state.familyCode}
-          </p>
-          <button
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(state.familyCode);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              } catch {
-                // sem permissão de área de transferência: o código está visível na tela
-              }
-            }}
-            className="btn h-12 bg-white px-5 text-base"
-          >
-            {copied ? "Copiado!" : "Copiar código"}
-          </button>
-          <p className="text-sm text-ink-soft">
-            {state.deviceCount === 1 ? "1 celular conectado." : `${state.deviceCount} celulares conectados.`} Quem tem o
-            código vê os remédios, então compartilhe só com quem cuida das crianças.
-          </p>
-          <button
-            onClick={() => {
-              if (window.confirm("Sair da família neste celular? Os remédios continuam salvos para os outros celulares.")) {
-                actions.leaveFamily();
-              }
-            }}
-            className="self-start text-sm font-semibold text-ink-soft underline"
-          >
-            Sair da família neste celular
-          </button>
-        </div>
-      </section>
+      <FamilyAccess />
+
+      <FamilyData />
 
       <section aria-labelledby="app" className="flex flex-col gap-2">
         <h2 id="app" className="group-label">Instalar o app</h2>

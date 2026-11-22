@@ -3,7 +3,13 @@
  * Sem o .env.local com PGHOST (por exemplo, no CI), o arquivo é pulado.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Fora de uma requisição não há cookies nem cabeçalhos: o suficiente para as funções que tiram a sessão.
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ delete: () => {}, set: () => {}, get: () => undefined }),
+  headers: async () => new Headers(),
+}));
 import type { Session } from "./auth";
 
 const HOUR = 3_600_000;
@@ -23,10 +29,12 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let growth: typeof import("./growth");
   let milestones: typeof import("./milestones");
   let summary: typeof import("./summary");
+  let family: typeof import("./family");
   let fam: Session;
   let other: Session;
   let childA: number;
   let childB: number;
+  const created: string[] = [];
 
   beforeAll(async () => {
     ({ sql } = await import("./sql"));
@@ -36,6 +44,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     growth = await import("./growth");
     milestones = await import("./milestones");
     summary = await import("./summary");
+    family = await import("./family");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -48,6 +57,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
       insert into families (code, created_at) values (${`T-${crypto.randomUUID()}`}, ${Date.now()}) returning id`;
     const [d] = await sql<{ id: string }[]>`
       insert into devices (family_id, token_hash, created_at) values (${f.id}, ${crypto.randomUUID()}, ${Date.now()}) returning id`;
+    created.push(f.id);
     return { familyId: f.id, deviceId: d.id };
   }
 
@@ -58,7 +68,9 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   }
 
   beforeEach(async () => {
-    await sql`delete from families where code like 'T-%'`;
+    // Pelo id, porque um teste troca o código da família.
+    await sql`delete from families where code like 'T-%' or id = any(${created}::uuid[])`;
+    created.length = 0;
     fam = await newFamily();
     other = await newFamily();
     childA = await newChild(fam, "Bianca");
@@ -361,6 +373,86 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     expect(data.growth.map((x) => x.measuredOn)).toEqual(["2026-10-01", "2026-11-12"]);
     expect(data.milestones.map((x) => x.title).sort()).toEqual(["Mês do início", "No período"]);
     await expect(summary.getSummaryData(other, q)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("aparelhos: lista, marca o atual e desconecta só outro aparelho da mesma família", async () => {
+    const [second] = await sql<{ id: string }[]>`
+      insert into devices (family_id, token_hash, label, device_info, created_at, last_seen_at)
+      values (${fam.familyId}, ${crypto.randomUUID()}, 'Ana', 'iPhone · Safari', 1, ${Date.now()}) returning id`;
+    const list = await family.listDevices(fam);
+    expect(list).toHaveLength(2);
+    expect(list.find((d) => d.current)?.id).toBe(fam.deviceId);
+    expect(list.find((d) => d.id === second.id)).toMatchObject({ name: "Ana", kind: "iPhone · Safari", current: false, push: false });
+
+    await expect(family.removeDevice(fam, fam.deviceId)).rejects.toMatchObject({ status: 400 });
+    await expect(family.removeDevice(other, second.id)).rejects.toMatchObject({ status: 404 });
+    await expect(family.removeDevice(fam, "nao-e-um-uuid")).rejects.toMatchObject({ status: 404 });
+    await family.removeDevice(fam, second.id);
+    expect(await family.listDevices(fam)).toHaveLength(1);
+  });
+
+  it("trocar o código: o antigo para de servir, os aparelhos continuam", async () => {
+    const { joinFamily, newCode } = await import("./auth");
+    const old = newCode();
+    await sql`update families set code = ${old} where id = ${fam.familyId}`;
+    const code = await family.rotateFamilyCode(fam);
+    expect(code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(code).not.toBe(old);
+    const [row] = await sql<{ code: string; code_changed_at: number }[]>`select code, code_changed_at from families where id = ${fam.familyId}`;
+    expect(row.code).toBe(code);
+    expect(row.code_changed_at).toBeGreaterThan(0);
+    const { CURRENT_CONSENT } = await import("@/lib/legal");
+    await expect(joinFamily(old, null, CURRENT_CONSENT)).rejects.toMatchObject({ status: 404 });
+    expect(await family.listDevices(fam)).toHaveLength(1);
+  });
+
+  it("exportar: traz os dados da família, sem segredos e sem nada de outra família", async () => {
+    await repo.updateChild(fam, childA, { birthDate: "2025-08-30", premature: "yes", gestationalAge: { weeks: 35, days: 0 } });
+    await repo.setChildPhoto(fam, childA, Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]));
+    await diary.createHealthEntry(fam, { childId: childA, occurredAt: Date.now(), temperature: 38.2, symptoms: ["Tosse"], note: "" });
+    await diary.createHealthEntry(other, { childId: await newChild(other, "Outra"), occurredAt: Date.now(), temperature: 39, symptoms: [], note: "alheio" });
+    const data = await family.exportFamily(fam);
+    const text = JSON.stringify(data);
+    expect(data.children.find((c) => c.id === childA)).toMatchObject({ birth_date: "2025-08-30", premature: "yes", ga_weeks: 35 });
+    expect(data.children.find((c) => c.id === childA)?.photo).toMatch(/^data:image\/jpeg;base64,/);
+    expect(data.diary).toEqual([expect.objectContaining({ temperature_c: 38.2, symptoms: ["Tosse"] })]);
+    expect(text).not.toContain("alheio");
+    expect(text).not.toContain("token_hash");
+    const [{ code }] = await sql<{ code: string }[]>`select code from families where id = ${fam.familyId}`;
+    expect(text).not.toContain(code);
+  });
+
+  it("excluir a família: pede a palavra de confirmação e apaga tudo, sem tocar em outra família", async () => {
+    await diary.createHealthEntry(fam, { childId: childA, occurredAt: Date.now(), temperature: null, symptoms: [], note: "x" });
+    const otherChild = await newChild(other, "Outra");
+    await diary.createHealthEntry(other, { childId: otherChild, occurredAt: Date.now(), temperature: null, symptoms: [], note: "fica" });
+    await expect(family.deleteFamily(fam, "excluir tudo")).rejects.toMatchObject({ status: 400 });
+    await family.deleteFamily(fam, " excluir ");
+    const [{ left }] = await sql<{ left: number }[]>`
+      select (select count(*) from families where id = ${fam.familyId})
+           + (select count(*) from children where family_id = ${fam.familyId})
+           + (select count(*) from devices where family_id = ${fam.familyId})
+           + (select count(*) from health_entries where family_id = ${fam.familyId}) as left`;
+    expect(Number(left)).toBe(0);
+    expect(await diary.listHealthEntries(other, { from: 0, to: Date.now() + HOUR })).toHaveLength(1);
+  });
+
+  it("aceite: aparelho sem aceite precisa aceitar; aceite de versão antiga não vale; criar família já grava o aceite", async () => {
+    const { acceptConsent, createFamily, parseConsent } = await import("./auth");
+    const { CURRENT_CONSENT } = await import("@/lib/legal");
+    expect((await repo.getState(fam, Date.now())).consentRequired).toBe(true);
+    await expect(acceptConsent(fam, { terms: "2020-01-01", privacy: CURRENT_CONSENT.privacy })).rejects.toMatchObject({ status: 400 });
+    await acceptConsent(fam, CURRENT_CONSENT);
+    expect((await repo.getState(fam, Date.now())).consentRequired).toBe(false);
+    const [row] = await sql<{ consent_at: number }[]>`select consent_at from devices where id = ${fam.deviceId}`;
+    expect(row.consent_at).toBeGreaterThan(0);
+
+    expect(() => parseConsent(undefined)).toThrow("aceite");
+    const code = await createFamily(null, parseConsent(CURRENT_CONSENT));
+    const [created] = await sql<{ id: string; terms_version: string; privacy_version: string }[]>`
+      select f.id, d.terms_version, d.privacy_version from families f join devices d on d.family_id = f.id where f.code = ${code}`;
+    created && (await sql`update families set code = ${`T-${crypto.randomUUID()}`} where id = ${created.id}`);
+    expect(created).toMatchObject({ terms_version: CURRENT_CONSENT.terms, privacy_version: CURRENT_CONSENT.privacy });
   });
 
   it("uma família não vê o histórico da outra", async () => {

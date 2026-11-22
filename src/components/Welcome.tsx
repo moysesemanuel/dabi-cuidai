@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { BellIcon, FamilyIcon, HeartIcon, Logo, Mascot, TicketIcon } from "./Art";
 import { useApp } from "./AppData";
+import { ConsentCheckbox } from "./Consent";
 
 const FEATURES = [
   { Icon: BellIcon, text: "Lembretes de remédios na hora certa" },
@@ -18,6 +19,7 @@ export function Welcome() {
   const [joining, setJoining] = useState(false);
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   async function run(kind: "create" | "join", fn: () => Promise<void>) {
     setError(null);
@@ -61,16 +63,18 @@ export function Welcome() {
         </ul>
 
         <div className="flex flex-col gap-3">
+          <ConsentCheckbox checked={agreed} onChange={setAgreed} />
+          {!agreed && <p className="-mt-1 text-center text-sm text-ink-soft">Marque a caixa acima para começar.</p>}
           <button
             onClick={() => run("create", actions.createFamily)}
-            disabled={busy !== null}
+            disabled={busy !== null || !agreed}
             className="btn btn-primary h-14 text-lg"
           >
             <FamilyIcon /> {busy === "create" ? "Criando..." : "Criar minha família"}
           </button>
 
           {!joining ? (
-            <button onClick={() => setJoining(true)} disabled={busy !== null} className="btn btn-outline h-14 text-lg">
+            <button onClick={() => setJoining(true)} disabled={busy !== null || !agreed} className="btn btn-outline h-14 text-lg">
               <TicketIcon /> Entrar com um código
             </button>
           ) : (
@@ -93,7 +97,7 @@ export function Welcome() {
               />
               <button
                 onClick={() => run("join", () => actions.joinFamily(code))}
-                disabled={busy !== null || code.trim().length < 12}
+                disabled={busy !== null || code.trim().length < 12 || !agreed}
                 className="btn btn-brand h-14 text-lg"
               >
                 {busy === "join" ? "Entrando..." : "Entrar"}
@@ -104,7 +108,10 @@ export function Welcome() {
 
         <p className="text-center text-sm text-ink-soft">
           Os remédios ficam guardados na sua família: quem entrar com o código em outro celular vê os mesmos horários e
-          recebe os mesmos avisos.
+          recebe os mesmos avisos.{" "}
+          <a href="/privacidade" className="font-bold text-brand underline">
+            Como cuidamos dos dados
+          </a>
         </p>
 
         {error && (
