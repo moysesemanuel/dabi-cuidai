@@ -46,10 +46,51 @@ export type DoseStatus = "pending" | "given";
 export interface DoseEvent {
   id: number;
   medicationId: number;
+  /** Criança, remédio e dose de quando a dose foi agendada (não os atuais do remédio). */
+  childId: number;
+  medName: string;
+  doseText: string;
   scheduledAt: number;
   status: DoseStatus;
   givenAt?: number;
 }
+
+/** Remédio "se necessário": sem horários nem avisos; a família registra cada dose quando dá. */
+export interface AsNeededMedication {
+  id: number;
+  childId: number;
+  name: string;
+  doseText: string;
+  /** A orientação da receita, como o profissional passou ("se febre acima de 37,8 °C…"). O app não interpreta. */
+  instructions: string;
+  createdAt: number;
+  /** Quando foi dada a última vez. */
+  lastGivenAt?: number;
+}
+
+export interface NewAsNeeded {
+  childId: number;
+  name: string;
+  doseText: string;
+  instructions: string;
+}
+
+/** Uma dose registrada de um remédio "se necessário". */
+export interface AsNeededDose {
+  id: number;
+  givenAt: number;
+  reason: string;
+  temperature?: number;
+}
+
+export interface AsNeededDoseInput {
+  givenAt: number;
+  reason: string;
+  temperature: number | null;
+}
+
+/** Atalhos para o motivo; a família pode escrever outro. */
+export const AS_NEEDED_REASONS = ["Febre", "Dor", "Cólica", "Tosse", "Enjoo"] as const;
 
 /** Uma dose no histórico, com o remédio como era quando a dose foi agendada. */
 export interface DoseHistoryItem {
@@ -58,8 +99,12 @@ export interface DoseHistoryItem {
   medicationId: number;
   medName: string;
   doseText: string;
-  /** Intervalo receitado quando a dose foi agendada. */
-  intervalMinutes: number;
+  /** Intervalo receitado quando a dose foi agendada (sem intervalo nos remédios "se necessário"). */
+  intervalMinutes?: number;
+  /** Dose de remédio "se necessário": registrada quando foi dada, com motivo e temperatura opcionais. */
+  asNeeded: boolean;
+  reason?: string;
+  temperature?: number;
   scheduledAt: number;
   status: DoseStatus;
   /** Quando alguém tocou em "Já dei". Sem isso e com status "given", a dose veio da versão antiga. */
@@ -128,6 +173,8 @@ export interface AppState {
   pushDeviceCount: number;
   children: Child[];
   medications: Medication[];
-  /** Doses de ontem à noite até o fim de hoje (ver `dayStart` na requisição). */
+  /** Remédios "se necessário" (sem horários). */
+  asNeeded: AsNeededMedication[];
+  /** Doses de hoje e as atrasadas sem "Já dei" das 24 h anteriores (ver `dayStart` na requisição). */
   doses: DoseEvent[];
 }

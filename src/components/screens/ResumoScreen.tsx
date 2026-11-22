@@ -133,7 +133,24 @@ export function ResumoScreen() {
                 <li key={m.medicationId}>
                   <span className="font-extrabold">{m.name}</span>
                   {m.doseText && <span className="text-ink-soft"> · {m.doseText}</span>}
-                  <span className="text-ink-soft"> · de {formatInterval(m.intervalMinutes)} em {formatInterval(m.intervalMinutes)}</span>
+                  <span className="text-ink-soft">
+                    {" "}
+                    ·{" "}
+                    {m.asNeeded || m.intervalMinutes === undefined
+                      ? "se necessário"
+                      : `de ${formatInterval(m.intervalMinutes)} em ${formatInterval(m.intervalMinutes)}`}
+                  </span>
+                  {m.uses.length > 0 && (
+                    <ul className="mt-1 flex flex-col gap-0.5 pl-3 tabular-nums">
+                      {m.uses.map((u) => (
+                        <li key={u.at}>
+                          {dm(u.at, year)} às {fmtTime(u.at)}
+                          {u.reason && <span>: {u.reason}</span>}
+                          {u.temperature !== undefined && <span> · {fmtTemperature(u.temperature)}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

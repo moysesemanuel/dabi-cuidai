@@ -86,9 +86,9 @@ export async function exportFamily(session: Session, now = Date.now()) {
     sql<{ id: number; photo: Buffer | null; photo_type: string | null }[]>`
       select id, name, fill as color, birth_date::text as birth_date, premature, ga_weeks, ga_days, photo, photo_type, created_at
       from children where family_id = ${f} order by id`,
-    sql`select id, child_id, name, dose_text, interval_minutes, first_dose_at, days, created_at, deleted_at
+    sql`select id, child_id, kind, name, dose_text, instructions, interval_minutes, first_dose_at, days, created_at, deleted_at
         from medications where family_id = ${f} order by id`,
-    sql`select id, medication_id, child_id, med_name, dose_text, interval_minutes, scheduled_at, status, given_at
+    sql`select id, medication_id, child_id, med_name, dose_text, interval_minutes, scheduled_at, status, given_at, reason, temp_tenths
         from doses where family_id = ${f} order by scheduled_at`,
     sql`select id, child_id, occurred_at, temp_tenths, symptoms, note, created_at, updated_at
         from health_entries where family_id = ${f} order by occurred_at`,
@@ -116,7 +116,12 @@ export async function exportFamily(session: Session, now = Date.now()) {
       created_at: iso(m.created_at),
       deleted_at: iso(m.deleted_at),
     })),
-    doses: doses.map((d) => ({ ...d, scheduled_at: iso(d.scheduled_at), given_at: iso(d.given_at) })),
+    doses: doses.map(({ temp_tenths, ...d }) => ({
+      ...d,
+      temperature_c: temp_tenths === null ? null : Number(temp_tenths) / 10,
+      scheduled_at: iso(d.scheduled_at),
+      given_at: iso(d.given_at),
+    })),
     diary: diary.map(({ temp_tenths, ...e }) => ({
       ...e,
       temperature_c: temp_tenths === null ? null : Number(temp_tenths) / 10,

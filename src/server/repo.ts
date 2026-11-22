@@ -2,6 +2,7 @@ import { generateDoseTimes, MAX_DAYS, MAX_INTERVAL_MINUTES, MIN_INTERVAL_MINUTES
 import {
   CHILD_COLORS,
   type AppState,
+  type AsNeededMedication,
   type Child,
   type DoseEvent,
   type DoseHistoryItem,
@@ -59,7 +60,19 @@ interface ChildRow {
   ga_days: number | null;
 }
 interface MedRow { id: number; child_id: number; name: string; dose_text: string; interval_minutes: number; first_dose_at: number; days: number; created_at: number }
-interface DoseRow { id: number; medication_id: number; scheduled_at: number; status: "pending" | "given"; given_at: number | null }
+interface DoseRow {
+  id: number;
+  medication_id: number;
+  child_id: number;
+  med_name: string;
+  dose_text: string;
+  scheduled_at: number;
+  status: "pending" | "given";
+  given_at: number | null;
+}
+
+/** Doses de antes de hoje que ainda aparecem no Início (atrasadas, sem "Já dei"). Mais antigas ficam só no Diário. */
+export const OVERDUE_WINDOW = 24 * HOUR;
 
 export async function getState(session: Session, dayStart: number): Promise<AppState> {
   const familyId = session.familyId;
@@ -75,11 +88,18 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
     from children where family_id = ${familyId} order by id`;
   const meds = await sql<MedRow[]>`
     select id, child_id, name, dose_text, interval_minutes, first_dose_at, days, created_at
-    from medications where family_id = ${familyId} and deleted_at is null order by id`;
+    from medications where family_id = ${familyId} and deleted_at is null and kind = 'scheduled' order by id`;
+  const asNeeded = await sql<
+    { id: number; child_id: number; name: string; dose_text: string; instructions: string; created_at: number; last_given: number | null }[]
+  >`
+    select m.id, m.child_id, m.name, m.dose_text, m.instructions, m.created_at,
+           (select max(d.given_at) from doses d where d.medication_id = m.id) as last_given
+    from medications m where m.family_id = ${familyId} and m.deleted_at is null and m.kind = 'as_needed' order by m.id`;
   const doses = await sql<DoseRow[]>`
-    select d.id, d.medication_id, d.scheduled_at, d.status, d.given_at from doses d
-    join medications m on m.id = d.medication_id and m.deleted_at is null
-    where d.family_id = ${familyId} and d.scheduled_at >= ${dayStart - 6 * HOUR} and d.scheduled_at < ${dayStart + 24 * HOUR}
+    select d.id, d.medication_id, d.child_id, d.med_name, d.dose_text, d.scheduled_at, d.status, d.given_at from doses d
+    join medications m on m.id = d.medication_id and m.deleted_at is null and m.kind = 'scheduled'
+    where d.family_id = ${familyId} and d.scheduled_at < ${dayStart + 24 * HOUR}
+      and (d.scheduled_at >= ${dayStart} or (d.status = 'pending' and d.scheduled_at >= ${dayStart - OVERDUE_WINDOW}))
     order by d.scheduled_at`;
 
   return {
@@ -112,10 +132,24 @@ export async function getState(session: Session, dayStart: number): Promise<AppS
         createdAt: m.created_at,
       }),
     ),
+    asNeeded: asNeeded.map(
+      (m): AsNeededMedication => ({
+        id: m.id,
+        childId: m.child_id,
+        name: m.name,
+        doseText: m.dose_text,
+        instructions: m.instructions,
+        createdAt: m.created_at,
+        lastGivenAt: m.last_given ?? undefined,
+      }),
+    ),
     doses: doses.map(
       (d): DoseEvent => ({
         id: d.id,
         medicationId: d.medication_id,
+        childId: d.child_id,
+        medName: d.med_name,
+        doseText: d.dose_text,
         scheduledAt: d.scheduled_at,
         status: d.status,
         givenAt: d.given_at ?? undefined,
@@ -309,7 +343,7 @@ export async function updateMedication(session: Session, id: number, input: NewM
     const updated = await tx`
       update medications set child_id = ${input.childId}, name = ${input.name}, dose_text = ${input.doseText},
         interval_minutes = ${input.intervalMinutes}, first_dose_at = ${input.firstDoseAt}, days = ${input.days}
-      where id = ${id} and family_id = ${session.familyId} and deleted_at is null returning id`;
+      where id = ${id} and family_id = ${session.familyId} and deleted_at is null and kind = 'scheduled' returning id`;
     if (!updated.length) throw new HttpError(404, "Remédio não encontrado.");
     await tx`delete from doses where medication_id = ${id} and status = 'pending' and scheduled_at >= ${from}`;
     const kept = new Set(
@@ -340,15 +374,31 @@ export async function deleteMedication(session: Session, id: number, now = Date.
 
 // ---------- doses ----------
 
-export async function setDoseGiven(session: Session, id: number, given: boolean): Promise<void> {
+export interface DoseResult {
+  status: "pending" | "given";
+  givenAt?: number;
+  /** A dose já estava assim (outro celular ou um aviso antigo chegou antes): nada mudou. */
+  unchanged: boolean;
+}
+
+/**
+ * Marca ou desfaz uma dose. Marcar de novo uma dose já dada não muda nada: o horário da primeira confirmação
+ * fica (um "Já dei" atrasado de um aviso antigo ou de outro celular não reescreve o registro).
+ * Desfazer é a correção explícita: volta a dose para pendente.
+ */
+export async function setDoseGiven(session: Session, id: number, given: boolean, now = Date.now()): Promise<DoseResult> {
   const rows = given
-    ? await sql`
-        update doses set status = 'given', given_at = ${Date.now()}, given_by = ${session.deviceId}
-        where id = ${id} and family_id = ${session.familyId} returning id`
-    : await sql`
+    ? await sql<{ given_at: number }[]>`
+        update doses set status = 'given', given_at = ${now}, given_by = ${session.deviceId}
+        where id = ${id} and family_id = ${session.familyId} and status = 'pending' returning given_at`
+    : await sql<{ given_at: null }[]>`
         update doses set status = 'pending', given_at = null, given_by = null, notified_count = 0, last_notified_at = null
-        where id = ${id} and family_id = ${session.familyId} returning id`;
-  if (!rows.length) throw new HttpError(404, "Dose não encontrada.");
+        where id = ${id} and family_id = ${session.familyId} and status = 'given' returning given_at`;
+  if (rows.length) return { status: given ? "given" : "pending", givenAt: rows[0].given_at ?? undefined, unchanged: false };
+  const [current] = await sql<{ status: "pending" | "given"; given_at: number | null }[]>`
+    select status, given_at from doses where id = ${id} and family_id = ${session.familyId}`;
+  if (!current) throw new HttpError(404, "Dose não encontrada.");
+  return { status: current.status, givenAt: current.given_at ?? undefined, unchanged: true };
 }
 
 // ---------- histórico ----------
@@ -391,15 +441,18 @@ export async function getDoseHistory(session: Session, q: HistoryQuery, now = Da
       medication_id: number;
       med_name: string;
       dose_text: string;
-      interval_minutes: number;
+      interval_minutes: number | null;
       scheduled_at: number;
       status: "pending" | "given";
       given_at: number | null;
       removed: boolean;
+      as_needed: boolean;
+      reason: string;
+      temp_tenths: number | null;
     }[]
   >`
     select d.id, d.child_id, d.medication_id, d.med_name, d.dose_text, d.interval_minutes, d.scheduled_at, d.status, d.given_at,
-           (m.deleted_at is not null) as removed
+           (m.deleted_at is not null) as removed, (m.kind = 'as_needed') as as_needed, d.reason, d.temp_tenths
     from doses d join medications m on m.id = d.medication_id
     where d.family_id = ${session.familyId}
       ${q.childId !== undefined ? sql`and d.child_id = ${q.childId}` : sql``}
@@ -412,7 +465,10 @@ export async function getDoseHistory(session: Session, q: HistoryQuery, now = Da
     medicationId: r.medication_id,
     medName: r.med_name,
     doseText: r.dose_text,
-    intervalMinutes: r.interval_minutes,
+    intervalMinutes: r.interval_minutes ?? undefined,
+    asNeeded: r.as_needed,
+    reason: r.reason || undefined,
+    temperature: r.temp_tenths === null ? undefined : r.temp_tenths / 10,
     scheduledAt: r.scheduled_at,
     status: r.status,
     givenAt: r.given_at ?? undefined,

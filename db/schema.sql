@@ -176,3 +176,23 @@ alter table families add column if not exists code_changed_at bigint;
 alter table devices add column if not exists terms_version text;
 alter table devices add column if not exists privacy_version text;
 alter table devices add column if not exists consent_at bigint;
+
+-- ---------- Remédios "se necessário" ----------
+-- Sem horários nem avisos: a família registra cada dose quando dá, com o motivo e a temperatura, se quiser.
+-- O app não decide quando dar; a orientação da receita fica como texto, do jeito que o profissional passou.
+alter table medications add column if not exists kind text not null default 'scheduled';
+alter table medications add column if not exists instructions text not null default '';
+do $$ begin
+  alter table medications add constraint medications_kind_chk check (kind in ('scheduled', 'as_needed'));
+exception when duplicate_object then null; end $$;
+alter table medications alter column interval_minutes drop not null;
+alter table medications alter column first_dose_at drop not null;
+alter table medications alter column days drop not null;
+do $$ begin
+  alter table medications add constraint medications_schedule_chk check (
+    kind = 'as_needed' or (interval_minutes is not null and first_dose_at is not null and days is not null)
+  );
+exception when duplicate_object then null; end $$;
+alter table doses alter column interval_minutes drop not null;
+alter table doses add column if not exists reason text not null default '';
+alter table doses add column if not exists temp_tenths smallint check (temp_tenths between 340 and 430);

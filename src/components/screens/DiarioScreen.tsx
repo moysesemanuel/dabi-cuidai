@@ -249,7 +249,15 @@ function DoseLine({ dose, child, showChild }: { dose: DoseHistoryItem; child?: C
           {dose.doseText && <span className="font-semibold text-ink-soft"> · {dose.doseText}</span>}
         </p>
         <p className="text-sm text-ink-soft">
-          {given
+          {dose.asNeeded
+            ? [
+                `Dado às ${fmtTime(dose.givenAt ?? dose.scheduledAt)} · se necessário`,
+                dose.reason,
+                dose.temperature !== undefined ? fmtTemperature(dose.temperature) : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : given
             ? dose.givenAt === undefined
               ? `Dado (previsto às ${fmtTime(dose.scheduledAt)})`
               : late

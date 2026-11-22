@@ -19,7 +19,8 @@ npm run icons                # regenera os ícones do PWA
 ## Como funciona agora
 
 - Os remédios ficam **no servidor** (Postgres), ligados a uma **família**. O primeiro celular cria a família e recebe um código (`XXXX-XXXX-XXXX`); o segundo entra com esse código em Ajustes. Não há senha: quem tem o código vê os remédios, então ele deve ser compartilhado só com quem cuida das crianças.
-- **Avisos (web push):** em Ajustes, "Ativar avisos neste celular" inscreve o aparelho. Cada dose agenda no Upstash QStash uma chamada de `POST /api/cron/dispatch` para o horário exato dela; essa chamada avisa a família inteira e agenda a próxima. Um *Schedule* de hora em hora no QStash serve só de rede de segurança. Se ninguém marcar "Já dei", repete a cada 10 minutos, até 6 vezes. Doses com mais de 3 horas de atraso não geram aviso novo (seguem "atrasadas" na tela).
+- **Remédios "se necessário":** sem horários nem avisos. A família registra cada dose quando dá, com o motivo e a temperatura no momento (opcionais); a orientação da receita fica como texto e o app não decide quando dar. As doses entram no Diário e no Resumo.
+- **Avisos (web push):** em Ajustes, "Ativar avisos neste celular" inscreve o aparelho. Cada dose agenda no Upstash QStash uma chamada de `POST /api/cron/dispatch` para o horário exato dela; essa chamada avisa a família inteira e agenda a próxima. Um *Schedule* de hora em hora no QStash serve só de rede de segurança. Se ninguém marcar "Já dei", repete a cada 10 minutos, até 6 vezes. Doses com mais de 3 horas de atraso não geram aviso novo. No Início, uma dose sem "Já dei" continua como atrasada por até 24 horas; depois disso fica só no histórico do Diário, como "sem Já dei".
 - A notificação tem o botão **Já dei**, que marca a dose sem abrir o app (no iPhone o botão não existe; tocar abre o app).
 - iPhone: avisos só com o app instalado na Tela de Início (iOS 16.4+). Android: funciona no Chrome.
 

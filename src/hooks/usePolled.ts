@@ -41,5 +41,5 @@ export function usePolled<T>(fetcher: () => Promise<T>, failMessage: string) {
     };
   }, [load]);
 
-  return { data, error };
+  return { data, error, reload: load };
 }

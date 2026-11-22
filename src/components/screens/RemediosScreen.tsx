@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 import { useReadyApp } from "@/components/AppData";
 import { Avatar, BottleIcon, CalendarIcon, EditIcon, Mascot, PlusIcon, TrashIcon } from "@/components/Art";
+import { whenText } from "@/components/AsNeeded";
 import { ChildFilter } from "@/components/ChildFilter";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { fmtDate } from "@/lib/format";
@@ -21,7 +22,7 @@ function listTimes(med: Medication): string {
 }
 
 export function RemediosScreen() {
-  const { state, actions } = useReadyApp();
+  const { state, now, actions } = useReadyApp();
   const [filter, setFilter] = useState<number | null>(null);
 
   const groups = useMemo(
@@ -31,8 +32,9 @@ export function RemediosScreen() {
         .map((child) => ({
           child,
           meds: state.medications.filter((m) => m.childId === child.id).sort((a, b) => b.createdAt - a.createdAt),
+          prn: state.asNeeded.filter((m) => m.childId === child.id).sort((a, b) => b.createdAt - a.createdAt),
         }))
-        .filter((g) => g.meds.length > 0),
+        .filter((g) => g.meds.length > 0 || g.prn.length > 0),
     [state, filter],
   );
 
@@ -42,7 +44,7 @@ export function RemediosScreen() {
     }
   }
 
-  const empty = state.medications.length === 0;
+  const empty = state.medications.length === 0 && state.asNeeded.length === 0;
 
   return (
     <div className="flex flex-col">
@@ -59,7 +61,7 @@ export function RemediosScreen() {
         )}
 
         <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-          {groups.map(({ child, meds }) => (
+          {groups.map(({ child, meds, prn }) => (
             <li key={child.id} className="card overflow-hidden">
               <div className="flex items-center gap-3 bg-brand-soft px-4 py-2.5">
                 <Avatar fill={child.fill} photo={child.photoUrl} size={36} />
@@ -113,6 +115,46 @@ export function RemediosScreen() {
                     </Fragment>
                   );
                 })}
+                {prn.map((med, i) => (
+                  <Fragment key={`prn-${med.id}`}>
+                    {(meds.length > 0 || i > 0) && <hr className="border-dashed border-line" />}
+                    <div className="flex flex-col gap-2.5 py-3.5">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 text-cta">
+                          <BottleIcon size={24} />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="break-words text-lg font-extrabold leading-tight">
+                            {med.name}{" "}
+                            <span className="ml-1 whitespace-nowrap rounded-full bg-sun/40 px-2 py-0.5 align-middle text-xs font-extrabold">
+                              se necessário
+                            </span>
+                          </h3>
+                          <p className="text-sm text-ink-soft">Dose prescrita: {med.doseText}</p>
+                        </div>
+                      </div>
+                      {med.instructions && (
+                        <p className="rounded-xl bg-brand-soft px-3 py-2 text-[15px] leading-snug">
+                          <b>Orientação:</b> {med.instructions}
+                        </p>
+                      )}
+                      <p className="text-[15px] text-ink-soft">
+                        {med.lastGivenAt ? `Última dose: ${whenText(med.lastGivenAt, now)}` : "Nenhuma dose registrada ainda."}
+                      </p>
+                      <Link href={`/remedios/${med.id}/dose`} className="btn btn-primary h-11 text-[15px]">
+                        <PlusIcon size={20} /> Registrar dose
+                      </Link>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <Link href={`/remedios/${med.id}`} className="btn btn-outline h-10 text-[15px]">
+                          <EditIcon /> Editar
+                        </Link>
+                        <button onClick={() => onRemove(med.id, med.name)} className="btn btn-danger h-10 text-[15px]">
+                          <TrashIcon /> Remover
+                        </button>
+                      </div>
+                    </div>
+                  </Fragment>
+                ))}
               </div>
             </li>
           ))}

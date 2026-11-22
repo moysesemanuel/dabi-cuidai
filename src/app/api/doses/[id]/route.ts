@@ -12,9 +12,9 @@ export async function POST(req: Request, { params }: Ctx) {
     const session = await requireSession();
     const { given } = await readJson(req);
     if (typeof given !== "boolean") throw new HttpError(400, "Parâmetro given inválido.");
-    await setDoseGiven(session, idParam((await params).id), given);
+    const result = await setDoseGiven(session, idParam((await params).id), given);
     // Desfazer "Já dei" volta a dose para a fila de avisos.
-    if (!given) after(() => armDispatch());
-    return json({ ok: true });
+    if (!given && !result.unchanged) after(() => armDispatch());
+    return json(result);
   });
 }

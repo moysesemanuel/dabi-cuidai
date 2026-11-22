@@ -5,7 +5,7 @@ import { api, ApiError, apiUpload } from "@/lib/api";
 import { startOfDay } from "@/lib/format";
 import { useNow } from "@/hooks/useNow";
 import { CURRENT_CONSENT } from "@/lib/legal";
-import type { AppState, ChildPatch, NewMedication } from "@/lib/types";
+import type { AppState, AsNeededDoseInput, ChildPatch, NewAsNeeded, NewMedication } from "@/lib/types";
 
 type Status = "loading" | "signed-out" | "ready" | "unavailable";
 
@@ -15,6 +15,10 @@ interface Actions {
   saveMedication(input: NewMedication): Promise<void>;
   updateMedication(id: number, input: NewMedication): Promise<void>;
   deleteMedication(id: number): Promise<void>;
+  saveAsNeeded(input: NewAsNeeded): Promise<void>;
+  updateAsNeeded(id: number, input: NewAsNeeded): Promise<void>;
+  registerAsNeededDose(medicationId: number, input: AsNeededDoseInput): Promise<void>;
+  deleteAsNeededDose(doseId: number): Promise<void>;
   addChild(): Promise<void>;
   updateChild(id: number, patch: ChildPatch): Promise<void>;
   deleteChild(id: number): Promise<void>;
@@ -59,14 +63,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   dayStartRef.current = dayStart;
 
   const retry = useCallback(() => setStatus("loading"), []);
-  const refresh = useCallback(async () => {
+  /** Busca o estado no servidor. Devolve o estado novo, ou null se não conseguiu falar com o servidor. */
+  const refresh = useCallback(async (): Promise<AppState | null> => {
     const ds = dayStartRef.current;
-    if (ds === null) return;
+    if (ds === null) return null;
     try {
       const next = await api<AppState>("GET", `/api/state?dayStart=${ds}`);
       setState(next);
       setStatus("ready");
       setOffline(false);
+      return next;
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setState(undefined);
@@ -76,6 +82,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         // Primeira abertura sem conseguir falar com o servidor: mostra "tentar de novo" em vez de tela vazia.
         setStatus((current) => (current === "loading" ? "unavailable" : current));
       }
+      return null;
     }
   }, []);
 
@@ -98,20 +105,25 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       await fn();
       await refresh();
     };
-    const setDose = (doseId: number, given: boolean) => {
-      // Atualiza a tela na hora; o refresh em seguida confirma com o servidor.
-      setState((s) =>
-        s && {
-          ...s,
-          doses: s.doses.map((d) =>
-            d.id === doseId ? { ...d, status: given ? "given" : "pending", givenAt: given ? Date.now() : undefined } : d,
-          ),
-        },
-      );
-      return run(() => api("POST", `/api/doses/${doseId}`, { given })).catch(async (err) => {
-        await refresh();
+    /**
+     * Medicação: a tela só mostra a dose como dada depois que o servidor confirma. Se a resposta se perder,
+     * confere o estado real antes de pedir nova tentativa (o servidor pode ter salvo mesmo assim).
+     */
+    const setDose = async (doseId: number, given: boolean) => {
+      let result: { status: "pending" | "given"; givenAt?: number };
+      try {
+        result = await api("POST", `/api/doses/${doseId}`, { given });
+      } catch (err) {
+        const fresh = await refresh();
+        const dose = fresh?.doses.find((d) => d.id === doseId);
+        if (dose && (dose.status === "given") === given) return;
         throw err;
-      });
+      }
+      // Já confirmado pelo servidor: mostra mesmo que a atualização completa abaixo falhe.
+      setState((s) =>
+        s && { ...s, doses: s.doses.map((d) => (d.id === doseId ? { ...d, status: result.status, givenAt: result.givenAt } : d)) },
+      );
+      await refresh();
     };
     return {
       markGiven: (id) => setDose(id, true),
@@ -120,6 +132,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       updateMedication: (id, input) =>
         run(() => api("PUT", `/api/medications/${id}`, { ...input, from: startOfDay(Date.now()) })),
       deleteMedication: (id) => run(() => api("DELETE", `/api/medications/${id}`)),
+      saveAsNeeded: (input) => run(() => api("POST", "/api/as-needed", input)),
+      updateAsNeeded: (id, input) => run(() => api("PUT", `/api/as-needed/${id}`, input)),
+      registerAsNeededDose: (id, input) => run(() => api("POST", `/api/as-needed/${id}/doses`, input)),
+      deleteAsNeededDose: (doseId) => run(() => api("DELETE", `/api/as-needed/doses/${doseId}`)),
       addChild: () => run(() => api("POST", "/api/children")),
       updateChild: (id, patch) => run(() => api("PATCH", `/api/children/${id}`, patch)),
       deleteChild: (id) => run(() => api("DELETE", `/api/children/${id}`)),

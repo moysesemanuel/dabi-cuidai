@@ -38,7 +38,7 @@ const INTERVAL_PRESETS = [4, 6, 8, 12, 24];
 const DAY_PRESETS = [1, 3, 5, 7, 10, 14];
 
 /** Formulário de remédio: cria um novo ou, com `medication`, edita um já cadastrado. */
-export function MedicationForm({ medication }: { medication?: Medication }) {
+export function MedicationForm({ medication, top }: { medication?: Medication; top?: React.ReactNode }) {
   const router = useRouter();
   const editing = medication !== undefined;
   const { state, actions } = useReadyApp();
@@ -121,6 +121,7 @@ export function MedicationForm({ medication }: { medication?: Medication }) {
   return (
     <div className="flex flex-col">
       <ScreenHeader title={editing ? "Editar remédio" : "Novo remédio"} back={editing ? "/remedios" : "/"} />
+      {top}
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
         <div className="flex flex-col gap-5">

@@ -18,7 +18,11 @@ export interface MedicationSummary {
   medicationId: number;
   name: string;
   doseText: string;
-  intervalMinutes: number;
+  /** Sem intervalo nos remédios "se necessário". */
+  intervalMinutes?: number;
+  asNeeded: boolean;
+  /** Remédio "se necessário": cada vez que foi dado, com motivo e temperatura. */
+  uses: { at: number; reason?: string; temperature?: number }[];
   /** Doses previstas no período que já chegaram na hora. */
   total: number;
   given: number;
@@ -88,6 +92,8 @@ export function buildSummary(data: SummaryData, fromDate: string): Summary {
       name: d.medName,
       doseText: d.doseText,
       intervalMinutes: d.intervalMinutes,
+      asNeeded: d.asNeeded,
+      uses: [],
       total: 0,
       given: 0,
       notMarked: 0,
@@ -96,6 +102,7 @@ export function buildSummary(data: SummaryData, fromDate: string): Summary {
       removed: d.medicationRemoved,
     };
     cur.total += 1;
+    if (d.asNeeded) cur.uses.push({ at: d.givenAt ?? d.scheduledAt, reason: d.reason, temperature: d.temperature });
     if (d.status === "given") cur.given += 1;
     else cur.notMarked += 1;
     cur.last = d.scheduledAt;

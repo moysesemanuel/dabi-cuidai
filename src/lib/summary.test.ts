@@ -22,6 +22,7 @@ const dose = (id: number, medicationId: number, at: number, status: "given" | "p
   medName: "Amoxicilina",
   doseText: "5 ml",
   intervalMinutes: 480,
+  asNeeded: false,
   scheduledAt: at,
   status,
   medicationRemoved: false,
@@ -48,6 +49,14 @@ describe("buildSummary", () => {
       dose(11, 5, t0 + 8 * H, "pending"),
       dose(12, 5, t0 + 16 * H, "given", { medName: "Amoxil", doseText: "7 ml", intervalMinutes: 360 }),
       dose(20, 6, t0 - 5 * H, "given", { medName: "Dipirona", doseText: "10 gotas", medicationRemoved: true }),
+      dose(30, 7, t0 + 2 * H, "given", {
+        medName: "Paracetamol",
+        intervalMinutes: undefined,
+        asNeeded: true,
+        givenAt: t0 + 2 * H,
+        reason: "Febre",
+        temperature: 38.4,
+      }),
     ],
     growth: [measure(2, "2026-11-12", 9050, 734), measure(1, "2026-09-15", 8600, 710), measure(3, "2026-11-20", undefined, 736)],
     milestones: [],
@@ -75,7 +84,13 @@ describe("buildSummary", () => {
     expect(s.medications).toEqual([
       expect.objectContaining({ medicationId: 6, name: "Dipirona", total: 1, given: 1, notMarked: 0, removed: true }),
       expect.objectContaining({ medicationId: 5, name: "Amoxil", doseText: "7 ml", intervalMinutes: 360, total: 3, given: 2, notMarked: 1, first: t0, last: t0 + 16 * H }),
+      expect.objectContaining({ medicationId: 7, name: "Paracetamol", asNeeded: true, intervalMinutes: undefined }),
     ]);
+    expect(s.medications[0].uses).toEqual([]);
+  });
+
+  it("remédio \"se necessário\": guarda cada vez que foi dado, com motivo e temperatura", () => {
+    expect(s.medications.find((m) => m.asNeeded)?.uses).toEqual([{ at: t0 + 2 * H, reason: "Febre", temperature: 38.4 }]);
   });
 
   it("crescimento: só medições do período, com a variação desde a anterior ao período", () => {

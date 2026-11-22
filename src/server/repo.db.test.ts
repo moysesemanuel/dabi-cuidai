@@ -30,6 +30,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let milestones: typeof import("./milestones");
   let summary: typeof import("./summary");
   let family: typeof import("./family");
+  let asNeeded: typeof import("./asNeeded");
   let fam: Session;
   let other: Session;
   let childA: number;
@@ -45,6 +46,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     milestones = await import("./milestones");
     summary = await import("./summary");
     family = await import("./family");
+    asNeeded = await import("./asNeeded");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -123,6 +125,45 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
       select scheduled_at, interval_minutes from doses where medication_id = ${medId} order by scheduled_at`;
     expect(rows.filter((r) => r.scheduled_at < now - 6 * HOUR).every((r) => r.interval_minutes === 480)).toBe(true);
     expect(rows.filter((r) => r.scheduled_at >= now - 6 * HOUR).every((r) => r.interval_minutes === 360)).toBe(true);
+  });
+
+  it("\"Já dei\" repetido não muda o horário da primeira confirmação; desfazer é a correção explícita", async () => {
+    const now = Date.now();
+    const medId = await repo.createMedication(fam, startedAgo(now));
+    const [first] = await sql<{ id: number }[]>`select id from doses where medication_id = ${medId} order by scheduled_at limit 1`;
+
+    const a = await repo.setDoseGiven(fam, first.id, true, now - 60_000);
+    expect(a).toEqual({ status: "given", givenAt: now - 60_000, unchanged: false });
+    // Outro celular ou um aviso antigo confirma de novo, mais tarde: nada muda.
+    const b = await repo.setDoseGiven(fam, first.id, true, now);
+    expect(b).toEqual({ status: "given", givenAt: now - 60_000, unchanged: true });
+
+    expect(await repo.setDoseGiven(fam, first.id, false, now)).toMatchObject({ status: "pending", unchanged: false });
+    expect(await repo.setDoseGiven(fam, first.id, false, now)).toMatchObject({ status: "pending", unchanged: true });
+    expect(await repo.setDoseGiven(fam, first.id, true, now + 1)).toMatchObject({ givenAt: now + 1, unchanged: false });
+    await expect(repo.setDoseGiven(other, first.id, true)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("Início: hoje inteiro e as atrasadas sem \"Já dei\" das 24 h anteriores, com criança e remédio da dose", async () => {
+    const dayStart = Date.now() - 2 * HOUR;
+    const at = (h: number) => dayStart + h * HOUR;
+    const medId = await repo.createMedication(fam, { ...startedAgo(Date.now()), firstDoseAt: at(-30), intervalMinutes: 4 * 60, days: 3 });
+    const doses = await sql<{ id: number; scheduled_at: number }[]>`select id, scheduled_at from doses where medication_id = ${medId} order by scheduled_at`;
+    // Uma dose de ontem já dada some do Início; as pendentes de ontem (até 24 h) ficam.
+    const givenYesterday = doses.find((d) => d.scheduled_at === at(-10))!;
+    await repo.setDoseGiven(fam, givenYesterday.id, true);
+    // O remédio passa para a outra criança só daqui em diante.
+    await repo.updateMedication(fam, medId, { ...startedAgo(Date.now()), firstDoseAt: at(-30), intervalMinutes: 4 * 60, days: 3, childId: childB, name: "Novo nome" }, dayStart);
+
+    const state = await repo.getState(fam, dayStart);
+    const times = state.doses.map((d) => (d.scheduledAt - dayStart) / HOUR);
+    expect(times.filter((h) => h < 0)).toEqual([-22, -18, -14, -6, -2]);
+    expect(times).not.toContain(-26);
+    expect(times).not.toContain(-10);
+    const yesterday = state.doses.find((d) => d.scheduledAt === at(-6))!;
+    expect(yesterday).toMatchObject({ childId: childA, medName: "Amoxicilina", doseText: "5 ml" });
+    const today = state.doses.find((d) => d.scheduledAt === at(2))!;
+    expect(today).toMatchObject({ childId: childB, medName: "Novo nome" });
   });
 
   it("remover o remédio guarda as doses passadas e apaga só as que ainda viriam", async () => {
@@ -451,8 +492,67 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     const code = await createFamily(null, parseConsent(CURRENT_CONSENT));
     const [created] = await sql<{ id: string; terms_version: string; privacy_version: string }[]>`
       select f.id, d.terms_version, d.privacy_version from families f join devices d on d.family_id = f.id where f.code = ${code}`;
-    created && (await sql`update families set code = ${`T-${crypto.randomUUID()}`} where id = ${created.id}`);
+    if (created) await sql`update families set code = ${`T-${crypto.randomUUID()}`} where id = ${created.id}`;
     expect(created).toMatchObject({ terms_version: CURRENT_CONSENT.terms, privacy_version: CURRENT_CONSENT.privacy });
+  });
+
+  it("se necessário: sem horários nem avisos; cada dose registrada com motivo e temperatura vai para o histórico", async () => {
+    const now = Date.now();
+    const medId = await asNeeded.createAsNeeded(fam, { childId: childA, name: "Paracetamol", doseText: "10 gotas", instructions: "se febre" });
+    // Não gera doses e não aparece na lista de horários.
+    const [{ n }] = await sql<{ n: number }[]>`select count(*)::bigint as n from doses where medication_id = ${medId}`;
+    expect(n).toBe(0);
+    let state = await repo.getState(fam, now - 2 * HOUR);
+    expect(state.medications).toEqual([]);
+    expect(state.asNeeded).toEqual([expect.objectContaining({ id: medId, name: "Paracetamol", instructions: "se febre" })]);
+    expect(state.asNeeded[0].lastGivenAt).toBeUndefined();
+
+    const doseId = await asNeeded.registerAsNeededDose(fam, medId, { givenAt: now - HOUR, reason: "Febre", temperature: 38.4 });
+    state = await repo.getState(fam, now - 2 * HOUR);
+    expect(state.asNeeded[0].lastGivenAt).toBe(now - HOUR);
+    // Fica fora da lista de doses do dia (não tem "Já dei" nem "Desfazer").
+    expect(state.doses).toEqual([]);
+    // Não entra na fila de avisos.
+    expect((await dispatch.dispatchDue(now)).due).toBe(0);
+
+    const history = await repo.getDoseHistory(fam, { childId: childA, from: now - 2 * HOUR, to: now });
+    expect(history).toEqual([
+      expect.objectContaining({ id: doseId, asNeeded: true, status: "given", givenAt: now - HOUR, reason: "Febre", temperature: 38.4 }),
+    ]);
+    expect(history[0].intervalMinutes).toBeUndefined();
+
+    // Editar o remédio não reescreve a dose já registrada; e a rota de horário fixo não edita um "se necessário".
+    await asNeeded.updateAsNeeded(fam, medId, { childId: childB, name: "Paracetamol 200", doseText: "12 gotas", instructions: "" });
+    expect((await asNeeded.listAsNeededDoses(fam, medId))[0]).toMatchObject({ id: doseId, reason: "Febre", temperature: 38.4 });
+    expect((await repo.getDoseHistory(fam, { childId: childA, from: now - 2 * HOUR, to: now }))[0].medName).toBe("Paracetamol");
+    await expect(repo.updateMedication(fam, medId, startedAgo(now), now)).rejects.toMatchObject({ status: 404 });
+
+    // Outra família não registra, não lê e não apaga; apagar só vale para dose de "se necessário".
+    await expect(asNeeded.registerAsNeededDose(other, medId, { givenAt: now, reason: "", temperature: null })).rejects.toMatchObject({ status: 404 });
+    await expect(asNeeded.listAsNeededDoses(other, medId)).rejects.toMatchObject({ status: 404 });
+    await expect(asNeeded.deleteAsNeededDose(other, doseId)).rejects.toMatchObject({ status: 404 });
+    const fixed = await repo.createMedication(fam, startedAgo(now));
+    const [fixedDose] = await sql<{ id: number }[]>`select id from doses where medication_id = ${fixed} limit 1`;
+    await expect(asNeeded.deleteAsNeededDose(fam, fixedDose.id)).rejects.toMatchObject({ status: 404 });
+    await asNeeded.deleteAsNeededDose(fam, doseId);
+    expect(await asNeeded.listAsNeededDoses(fam, medId)).toEqual([]);
+
+    // Remover o remédio usa a mesma rota dos outros e o tira da lista.
+    await repo.deleteMedication(fam, medId);
+    expect((await repo.getState(fam, now)).asNeeded).toEqual([]);
+  });
+
+  it("se necessário: validação da dose registrada", () => {
+    const now = 1_800_000_000_000;
+    expect(asNeeded.parseAsNeededDose({ givenAt: now - 60_000, reason: " Dor ", temperature: 37.84 }, now)).toEqual({
+      givenAt: now - 60_000,
+      reason: "Dor",
+      temperature: 37.8,
+    });
+    expect(() => asNeeded.parseAsNeededDose({ givenAt: now + 2 * HOUR }, now)).toThrow("futuro");
+    expect(() => asNeeded.parseAsNeededDose({ givenAt: now - 8 * 24 * HOUR }, now)).toThrow("7 dias");
+    expect(() => asNeeded.parseAsNeededDose({ givenAt: now, temperature: 45 }, now)).toThrow("entre 34 e 43");
+    expect(() => asNeeded.parseAsNeeded({ childId: 1, name: "X", doseText: " " })).toThrow("Dose");
   });
 
   it("uma família não vê o histórico da outra", async () => {
