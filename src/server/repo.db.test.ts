@@ -20,6 +20,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let repo: typeof import("./repo");
   let dispatch: typeof import("./dispatch");
   let diary: typeof import("./diary");
+  let growth: typeof import("./growth");
   let fam: Session;
   let other: Session;
   let childA: number;
@@ -30,6 +31,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     repo = await import("./repo");
     dispatch = await import("./dispatch");
     diary = await import("./diary");
+    growth = await import("./growth");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -250,6 +252,39 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     await expect(diary.diaryMonths(other, childA, tz)).rejects.toMatchObject({ status: 404 });
     expect(() => diary.parseTimeZone("Marte/Base")).toThrow("Fuso");
     expect(diary.parseTimeZone(tz)).toBe(tz);
+  });
+
+  it("crescimento: cria, lista em ordem de data, edita, exclui e protege por família", async () => {
+    await repo.updateChild(fam, childA, { birthDate: "2025-06-01" });
+    const later = await growth.createGrowth(fam, { childId: childA, measuredOn: "2026-11-10", weightG: 9320, lengthMm: 751, note: "" });
+    await growth.createGrowth(fam, { childId: childA, measuredOn: "2025-06-01", weightG: 1860, lengthMm: null, note: "nascimento" });
+    await growth.createGrowth(fam, { childId: childB, measuredOn: "2026-11-10", weightG: 9900, lengthMm: null, note: "" });
+
+    const list = await growth.listGrowth(fam, childA);
+    expect(list.map((m) => m.measuredOn)).toEqual(["2025-06-01", "2026-11-10"]);
+    expect(list[0]).toMatchObject({ weightG: 1860, note: "nascimento" });
+    expect(list[0].lengthMm).toBeUndefined();
+
+    await expect(
+      growth.createGrowth(fam, { childId: childA, measuredOn: "2025-05-31", weightG: 1800, lengthMm: null, note: "" }),
+    ).rejects.toThrow("anterior ao nascimento");
+
+    await growth.updateGrowth(fam, later, { childId: childA, measuredOn: "2026-11-11", weightG: 9350, lengthMm: 752, note: "" });
+    expect(await growth.getGrowth(fam, later)).toMatchObject({ measuredOn: "2026-11-11", weightG: 9350, lengthMm: 752 });
+
+    const input = { childId: childA, measuredOn: "2026-11-10", weightG: 1, lengthMm: null, note: "" };
+    await expect(growth.listGrowth(other, childA)).rejects.toMatchObject({ status: 404 });
+    await expect(growth.getGrowth(other, later)).rejects.toMatchObject({ status: 404 });
+    await expect(growth.updateGrowth(other, later, input)).rejects.toMatchObject({ status: 404 });
+    await expect(growth.deleteGrowth(other, later)).rejects.toMatchObject({ status: 404 });
+    await expect(growth.createGrowth(other, input)).rejects.toMatchObject({ status: 404 });
+
+    await growth.deleteGrowth(fam, later);
+    expect(await growth.listGrowth(fam, childA)).toHaveLength(1);
+    await repo.deleteChild(fam, childA);
+    const [{ left }] = await sql<{ left: number }[]>`
+      select count(*)::bigint as left from growth_measurements where family_id = ${fam.familyId}`;
+    expect(left).toBe(1);
   });
 
   it("uma família não vê o histórico da outra", async () => {

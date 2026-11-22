@@ -125,3 +125,20 @@ create table if not exists health_entries (
 );
 create index if not exists health_entries_child_idx on health_entries (child_id, occurred_at desc);
 create index if not exists health_entries_family_idx on health_entries (family_id, occurred_at desc);
+
+-- ---------- V2: crescimento ----------
+-- Medições registradas pela família. Peso em gramas e comprimento em milímetros: inteiros, sem arredondamento.
+create table if not exists growth_measurements (
+  id bigserial primary key,
+  family_id uuid not null references families (id) on delete cascade,
+  child_id bigint not null references children (id) on delete cascade,
+  measured_on date not null,
+  weight_g integer check (weight_g between 300 and 40000),
+  length_mm integer check (length_mm between 250 and 1500),
+  note text not null default '',
+  created_by uuid references devices (id) on delete set null,
+  created_at bigint not null,
+  updated_at bigint not null,
+  check (weight_g is not null or length_mm is not null)
+);
+create index if not exists growth_child_idx on growth_measurements (child_id, measured_on);

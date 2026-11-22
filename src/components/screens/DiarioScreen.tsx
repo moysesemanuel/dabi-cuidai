@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Avatar, BottleIcon, ChevronIcon, Mascot, PlusIcon, ThermometerIcon } from "@/components/Art";
 import { useReadyApp } from "@/components/AppData";
 import { ChildFilter } from "@/components/ChildFilter";
+import { DiaryTabs } from "@/components/DiaryTabs";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { useDiaryMonth, useDiaryMonths, type DiaryMonth } from "@/hooks/useDiary";
 import { fmtDayLabel, fmtTemperature, fmtTime, startOfDay } from "@/lib/format";
@@ -48,6 +49,7 @@ export function DiarioScreen() {
       />
 
       <div className="flex flex-col gap-5">
+        <DiaryTabs current="/diario" />
         <ChildFilter label="Ver registros de:" kids={state.children} value={filter} onChange={setFilter} />
 
         <div className="flex flex-wrap items-center gap-2">
