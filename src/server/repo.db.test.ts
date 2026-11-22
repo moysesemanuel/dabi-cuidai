@@ -21,6 +21,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let dispatch: typeof import("./dispatch");
   let diary: typeof import("./diary");
   let growth: typeof import("./growth");
+  let milestones: typeof import("./milestones");
   let fam: Session;
   let other: Session;
   let childA: number;
@@ -32,6 +33,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     dispatch = await import("./dispatch");
     diary = await import("./diary");
     growth = await import("./growth");
+    milestones = await import("./milestones");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -285,6 +287,43 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     const [{ left }] = await sql<{ left: number }[]>`
       select count(*)::bigint as left from growth_measurements where family_id = ${fam.familyId}`;
     expect(left).toBe(1);
+  });
+
+  it("marcos: cria, lista do mais recente, respeita o nascimento, protege por família e some com a criança", async () => {
+    await repo.updateChild(fam, childA, { birthDate: "2025-08-30" });
+    const base = { childId: childA, category: null, note: "" } as const;
+    const steps = await milestones.createMilestone(fam, { ...base, title: "Primeiros passos", happenedOn: "2026-10-12", precision: "day" });
+    await milestones.createMilestone(fam, { ...base, title: "Primeiro sorriso", happenedOn: "2025-10-01", precision: "about" });
+    // Mesmo mês do nascimento com precisão de mês: aceito.
+    await milestones.createMilestone(fam, { ...base, title: "Mamou bem", happenedOn: "2025-08-01", precision: "month" });
+    await expect(
+      milestones.createMilestone(fam, { ...base, title: "x", happenedOn: "2025-08-29", precision: "day" }),
+    ).rejects.toThrow("anterior ao nascimento");
+
+    const list = await milestones.listMilestones(fam, childA);
+    expect(list.map((m) => m.title)).toEqual(["Primeiros passos", "Primeiro sorriso", "Mamou bem"]);
+    expect(list[1]).toMatchObject({ precision: "about", happenedOn: "2025-10-01" });
+    expect(list[1].category).toBeUndefined();
+
+    await milestones.updateMilestone(fam, steps, { ...base, title: "Primeiros passos sozinha", happenedOn: "2026-10-12", precision: "day", category: "movement" });
+    expect(await milestones.getMilestone(fam, steps)).toMatchObject({ title: "Primeiros passos sozinha", category: "movement" });
+
+    const input = { ...base, title: "x", happenedOn: "2026-10-12", precision: "day" } as const;
+    await expect(milestones.listMilestones(other, childA)).rejects.toMatchObject({ status: 404 });
+    await expect(milestones.getMilestone(other, steps)).rejects.toMatchObject({ status: 404 });
+    await expect(milestones.updateMilestone(other, steps, input)).rejects.toMatchObject({ status: 404 });
+    await expect(milestones.deleteMilestone(other, steps)).rejects.toMatchObject({ status: 404 });
+    await expect(milestones.createMilestone(other, input)).rejects.toMatchObject({ status: 404 });
+
+    await milestones.deleteMilestone(fam, steps);
+    expect(await milestones.listMilestones(fam, childA)).toHaveLength(2);
+
+    const data = { children: [{ id: 1, name: "X", fill: "#FFAFA3" }], medications: [], doses: [] };
+    await expect(repo.importLocal(fam, data)).rejects.toMatchObject({ status: 409 });
+
+    await repo.deleteChild(fam, childA);
+    const [{ left }] = await sql<{ left: number }[]>`select count(*)::bigint as left from milestones where family_id = ${fam.familyId}`;
+    expect(left).toBe(0);
   });
 
   it("uma família não vê o histórico da outra", async () => {

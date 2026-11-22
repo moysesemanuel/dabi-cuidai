@@ -5,12 +5,13 @@ import Link from "next/link";
 const TABS = [
   { href: "/diario", label: "Registros" },
   { href: "/diario/crescimento", label: "Crescimento" },
+  { href: "/diario/marcos", label: "Marcos" },
 ] as const;
 
-/** Abas internas do Diário. Marcos e Resumo entram aqui quando ficarem prontos. */
+/** Abas internas do Diário. O Resumo entra aqui quando ficar pronto. */
 export function DiaryTabs({ current }: { current: (typeof TABS)[number]["href"] }) {
   return (
-    <nav aria-label="Seções do diário" className="grid grid-cols-2 gap-1 rounded-2xl bg-field p-1">
+    <nav aria-label="Seções do diário" className="grid grid-cols-3 gap-1 rounded-2xl bg-field p-1">
       {TABS.map((t) => {
         const on = t.href === current;
         return (

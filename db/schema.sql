@@ -142,3 +142,21 @@ create table if not exists growth_measurements (
   check (weight_g is not null or length_mm is not null)
 );
 create index if not exists growth_child_idx on growth_measurements (child_id, measured_on);
+
+-- ---------- V2: marcos do desenvolvimento ----------
+-- Momentos e habilidades que a família observou. Sem comparação com outras crianças nem entre irmãos.
+create table if not exists milestones (
+  id bigserial primary key,
+  family_id uuid not null references families (id) on delete cascade,
+  child_id bigint not null references children (id) on delete cascade,
+  title text not null,
+  -- 'day': data exata; 'month': só o mês; 'about': "por volta de" um mês. Nos dois últimos, guarda o dia 1º.
+  happened_on date not null,
+  date_precision text not null check (date_precision in ('day', 'month', 'about')),
+  category text check (category in ('movement', 'communication', 'interaction', 'other')),
+  note text not null default '',
+  created_by uuid references devices (id) on delete set null,
+  created_at bigint not null,
+  updated_at bigint not null
+);
+create index if not exists milestones_child_idx on milestones (child_id, happened_on desc);
