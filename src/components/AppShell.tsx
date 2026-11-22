@@ -82,7 +82,7 @@ function Frame({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:flex">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-white p-5 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r border-line bg-white p-5 lg:flex print:hidden">
         <div className="px-2 pt-2">
           <Logo size={34} />
         </div>
@@ -93,11 +93,11 @@ function Frame({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <main className="mx-auto w-full max-w-md px-5 pb-32 lg:max-w-5xl lg:px-8 lg:pb-12 lg:pt-8">{children}</main>
+      <main className="mx-auto w-full max-w-md px-5 pb-32 lg:max-w-5xl lg:px-8 lg:pb-12 lg:pt-8 print:max-w-none print:px-[12mm] print:py-[8mm]">{children}</main>
 
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-10 flex h-[84px] items-stretch rounded-t-3xl border-t border-line bg-white px-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgb(28_58_62/0.06)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-10 flex h-[84px] print:hidden items-stretch rounded-t-3xl border-t border-line bg-white px-3 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgb(28_58_62/0.06)] lg:hidden"
       >
         <Suspense fallback={null}>
           <NavLinks variant="bottom" />

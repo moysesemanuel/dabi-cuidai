@@ -370,3 +370,11 @@ body {
     pointer-events: none;
   }
 }
+
+/* Impressão do resumo: as margens ficam no próprio conteúdo (print:px-[12mm] print:py-[8mm] no <main>),
+   para não depender da opção "Margens" do Chrome. A margem da página só cuida das folhas seguintes. */
+@media print {
+  @page {
+    margin: 8mm 0;
+  }
+}

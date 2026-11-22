@@ -58,6 +58,8 @@ export interface DoseHistoryItem {
   medicationId: number;
   medName: string;
   doseText: string;
+  /** Intervalo receitado quando a dose foi agendada. */
+  intervalMinutes: number;
   scheduledAt: number;
   status: DoseStatus;
   /** Quando alguém tocou em "Já dei". Sem isso e com status "given", a dose veio da versão antiga. */

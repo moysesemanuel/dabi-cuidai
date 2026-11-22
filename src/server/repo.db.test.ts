@@ -22,6 +22,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
   let diary: typeof import("./diary");
   let growth: typeof import("./growth");
   let milestones: typeof import("./milestones");
+  let summary: typeof import("./summary");
   let fam: Session;
   let other: Session;
   let childA: number;
@@ -34,6 +35,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     diary = await import("./diary");
     growth = await import("./growth");
     milestones = await import("./milestones");
+    summary = await import("./summary");
     await sql.unsafe(readFileSync("db/schema.sql", "utf8"));
   });
 
@@ -90,7 +92,7 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
 
     const history = await repo.getDoseHistory(fam, { from: now - 2 * 24 * HOUR, to: now + 24 * HOUR });
     const given = history.find((d) => d.id === givenId)!;
-    expect(given).toMatchObject({ medName: "Amoxicilina", doseText: "5 ml", childId: childA, status: "given" });
+    expect(given).toMatchObject({ medName: "Amoxicilina", doseText: "5 ml", intervalMinutes: 480, childId: childA, status: "given" });
     expect(given.givenAt).toBeTypeOf("number");
 
     // A dose de -4 h (depois do começo do dia de quem editou) já foi refeita com os dados novos.
@@ -99,6 +101,16 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
 
     // Doses futuras não entram no histórico.
     expect(history.every((d) => d.scheduledAt <= now)).toBe(true);
+  });
+
+  it("mudar o intervalo vale só dali em diante: as doses passadas guardam o de quando foram agendadas", async () => {
+    const now = Date.now();
+    const medId = await repo.createMedication(fam, startedAgo(now));
+    await repo.updateMedication(fam, medId, { ...startedAgo(now), intervalMinutes: 6 * 60 }, now - 6 * HOUR);
+    const rows = await sql<{ scheduled_at: number; interval_minutes: number }[]>`
+      select scheduled_at, interval_minutes from doses where medication_id = ${medId} order by scheduled_at`;
+    expect(rows.filter((r) => r.scheduled_at < now - 6 * HOUR).every((r) => r.interval_minutes === 480)).toBe(true);
+    expect(rows.filter((r) => r.scheduled_at >= now - 6 * HOUR).every((r) => r.interval_minutes === 360)).toBe(true);
   });
 
   it("remover o remédio guarda as doses passadas e apaga só as que ainda viriam", async () => {
@@ -324,6 +336,31 @@ describe.skipIf(!hasDb)("repositório (Postgres local)", () => {
     await repo.deleteChild(fam, childA);
     const [{ left }] = await sql<{ left: number }[]>`select count(*)::bigint as left from milestones where family_id = ${fam.familyId}`;
     expect(left).toBe(0);
+  });
+
+  it("resumo: junta o período, com a medição anterior como referência e marcos só do mês", async () => {
+    const from = Date.UTC(2026, 9, 21, 3);
+    const to = Date.UTC(2026, 10, 22, 3);
+    const q = { childId: childA, from, to, fromDate: "2026-10-21", toDate: "2026-11-21" };
+    await sql`insert into health_entries (family_id, child_id, occurred_at, temp_tenths, note, created_at, updated_at) values
+      (${fam.familyId}, ${childA}, ${from + HOUR}, 384, '', 0, 0),
+      (${fam.familyId}, ${childA}, ${from - HOUR}, 390, 'fora do período', 0, 0),
+      (${fam.familyId}, ${childB}, ${from + HOUR}, 370, 'outra criança', 0, 0)`;
+    const g = (measuredOn: string, weightG: number) => growth.createGrowth(fam, { childId: childA, measuredOn, weightG, lengthMm: null, note: "" });
+    await g("2026-09-15", 8600);
+    await g("2026-10-01", 8800);
+    await g("2026-11-12", 9050);
+    const m = (title: string, happenedOn: string, precision: "day" | "month") =>
+      milestones.createMilestone(fam, { childId: childA, title, happenedOn, precision, category: null, note: "" });
+    await m("Mês do início", "2026-10-01", "month");
+    await m("Antes do período", "2026-10-20", "day");
+    await m("No período", "2026-11-02", "day");
+
+    const data = await summary.getSummaryData(fam, q);
+    expect(data.entries.map((e) => e.temperature)).toEqual([38.4]);
+    expect(data.growth.map((x) => x.measuredOn)).toEqual(["2026-10-01", "2026-11-12"]);
+    expect(data.milestones.map((x) => x.title).sort()).toEqual(["Mês do início", "No período"]);
+    await expect(summary.getSummaryData(other, q)).rejects.toMatchObject({ status: 404 });
   });
 
   it("uma família não vê o histórico da outra", async () => {

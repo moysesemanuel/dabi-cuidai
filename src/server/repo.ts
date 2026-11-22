@@ -269,7 +269,7 @@ async function assertChild(session: Session, childId: number): Promise<void> {
 }
 
 /** Colunas de uma dose nova. A cópia de criança, nome e dose congela o histórico (ver db/schema.sql). */
-const DOSE_COLUMNS = ["family_id", "medication_id", "child_id", "med_name", "dose_text", "scheduled_at"] as const;
+const DOSE_COLUMNS = ["family_id", "medication_id", "child_id", "med_name", "dose_text", "interval_minutes", "scheduled_at"] as const;
 
 const doseRows = (familyId: string, medicationId: number, med: NewMedication, times: number[]) =>
   times.map((scheduledAt) => ({
@@ -278,6 +278,7 @@ const doseRows = (familyId: string, medicationId: number, med: NewMedication, ti
     child_id: med.childId,
     med_name: med.name,
     dose_text: med.doseText,
+    interval_minutes: med.intervalMinutes,
     scheduled_at: scheduledAt,
   }));
 
@@ -387,13 +388,14 @@ export async function getDoseHistory(session: Session, q: HistoryQuery, now = Da
       medication_id: number;
       med_name: string;
       dose_text: string;
+      interval_minutes: number;
       scheduled_at: number;
       status: "pending" | "given";
       given_at: number | null;
       removed: boolean;
     }[]
   >`
-    select d.id, d.child_id, d.medication_id, d.med_name, d.dose_text, d.scheduled_at, d.status, d.given_at,
+    select d.id, d.child_id, d.medication_id, d.med_name, d.dose_text, d.interval_minutes, d.scheduled_at, d.status, d.given_at,
            (m.deleted_at is not null) as removed
     from doses d join medications m on m.id = d.medication_id
     where d.family_id = ${session.familyId}
@@ -407,6 +409,7 @@ export async function getDoseHistory(session: Session, q: HistoryQuery, now = Da
     medicationId: r.medication_id,
     medName: r.med_name,
     doseText: r.dose_text,
+    intervalMinutes: r.interval_minutes,
     scheduledAt: r.scheduled_at,
     status: r.status,
     givenAt: r.given_at ?? undefined,

@@ -89,6 +89,11 @@ alter table doses alter column child_id set not null;
 alter table doses alter column med_name set not null;
 alter table doses alter column dose_text set not null;
 create index if not exists doses_child_scheduled_idx on doses (child_id, scheduled_at);
+-- O intervalo receitado também fica na dose (de 8 em 8 h…), pelo mesmo motivo: o resumo mostra o de então.
+alter table doses add column if not exists interval_minutes integer;
+update doses d set interval_minutes = m.interval_minutes
+from medications m where m.id = d.medication_id and d.interval_minutes is null;
+alter table doses alter column interval_minutes set not null;
 
 -- ---------- V2: perfil da criança ----------
 -- Data de nascimento é data civil (sem horário), para não mudar de dia por causa do fuso.
