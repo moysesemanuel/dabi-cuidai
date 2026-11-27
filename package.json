@@ -12,6 +12,7 @@
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.78.0",
     "@upstash/qstash": "^2.12.1",
     "@vercel/analytics": "^2.0.1",
     "dexie": "^4.4.6",
